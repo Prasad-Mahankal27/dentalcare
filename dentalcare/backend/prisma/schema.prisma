@@ -1,0 +1,114 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  phone     String   @unique
+  password  String
+  role      Role
+  createdAt DateTime @default(now())
+
+  visits    Visit[]
+}
+
+model Patient {
+  id          Int      @id @default(autoincrement())
+  patientId   String   @unique
+  name        String
+  phone       String
+  age         Int?
+  gender      String?
+  address     String?
+  createdAt   DateTime @default(now())
+
+  visits      Visit[]
+}
+
+enum Role {
+  DOCTOR
+  RECEPTIONIST
+}
+
+enum VisitType {
+  NEW
+  FOLLOW_UP
+}
+
+enum CaseOutcome {
+  ONGOING
+  COMPLETED
+}
+
+model Visit {
+  id              Int              @id @default(autoincrement())
+  visitId         String           @unique
+
+  patientId       Int
+  doctorId        Int
+
+  visitType       VisitType        @default(NEW)
+  caseOutcome     CaseOutcome      @default(ONGOING)
+
+  symptoms        String?
+  diagnosis       String?
+  observations    String?
+  treatmentPlan   String?
+  procedures      String?
+  followUpAdvice  String?
+  medicines       String?
+  labTests        String?
+
+  clinicalStatus  ClinicalStatus   @default(IN_PROGRESS)
+  paymentStatus   PaymentStatus    @default(NOT_BILLED)
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  patient         Patient          @relation(fields: [patientId], references: [id])
+  doctor          User             @relation(fields: [doctorId], references: [id])
+  bill            Billing?
+}
+
+enum VisitStatus {
+  DRAFT
+  COMPLETED
+}
+
+enum ClinicalStatus {
+  IN_PROGRESS
+  CLINICALLY_COMPLETED
+}
+
+enum PaymentStatus {
+  NOT_BILLED
+  PARTIALLY_PAID
+  PAID
+}
+
+model Billing {
+  id               Int      @id @default(autoincrement())
+  billId           String   @unique
+
+  visitId          Int      @unique
+
+  previousPending  Float    @default(0)
+  pendingCleared   Float    @default(0)
+  updatedPending   Float
+
+  currentCharges   Float
+  discount         Float    @default(0)
+  totalAmount      Float
+  paidAmount       Float
+  pendingAmount    Float
+
+  createdAt        DateTime @default(now())
+
+  visit            Visit    @relation(fields: [visitId], references: [id])
+}
