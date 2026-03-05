@@ -7,6 +7,7 @@ import {
   Plus,
   X
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface SidebarProps {
   activeItem?: string;
@@ -21,10 +22,12 @@ export function Sidebar({
   isOpen,
   onClose
 }: SidebarProps) {
+  const navigate = useNavigate();
+
   const menuItems = [
-    { icon: LayoutDashboard, label: "Dashboard", hasAdd: false },
-    { icon: Calendar, label: "Appointments", hasAdd: true },
-    { icon: Users, label: "Doctors", hasAdd: true }
+    { icon: LayoutDashboard, label: "Dashboard", path: "/doctor", hasAdd: false },
+    { icon: Calendar, label: "Appointments", path: "/doctor/appointments", hasAdd: true },
+    { icon: Users, label: "Doctors", path: "/doctor/doctors", hasAdd: true }
   ];
 
   return (
@@ -42,7 +45,7 @@ export function Sidebar({
           w-52 bg-white border-r border-gray-200
           transform transition-transform duration-300
           ${isOpen ? "translate-x-0" : "-translate-x-full"}
-          lg:translate-x-0
+          lg:translate-x-0 flex flex-col
         `}
       >
         <div className="flex items-center justify-between px-4 py-4">
@@ -58,42 +61,48 @@ export function Sidebar({
           </button>
         </div>
 
-        <nav className="px-3 space-y-1">
+        <nav className="px-3 space-y-1 flex-1">
           {menuItems.map(item => {
             const isActive = activeItem === item.label;
 
             return (
               <div
                 key={item.label}
-                className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer
+                onClick={() => {
+                  navigate(item.path);
+                  onClose?.();
+                }}
+                className={`flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer transition-colors
                   ${
                     isActive
-                      ? "bg-emerald-100 text-emerald-700 font-semibold"
-                      : "text-gray-600 hover:bg-gray-50"
+                      ? "bg-emerald-50 text-emerald-700 font-bold"
+                      : "text-gray-600 hover:bg-gray-50 font-medium"
                   }`}
               >
                 <div className="flex items-center gap-3">
-                  <item.icon className="w-4 h-4" />
+                  <item.icon className={`w-4 h-4 ${isActive ? "text-emerald-600" : "text-gray-500"}`} />
                   <span className="text-sm">{item.label}</span>
                 </div>
 
                 {item.hasAdd && (
-                  <Plus className="w-4 h-4 text-gray-400" />
+                  <button className="p-0.5 hover:bg-gray-200 rounded-sm">
+                    <Plus className="w-4 h-4 text-gray-400" />
+                  </button>
                 )}
               </div>
             );
           })}
         </nav>
 
-        <div className="absolute bottom-4 left-0 right-0 px-3 space-y-1">
-          <div className="flex items-center gap-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded">
-            <Settings className="w-4 h-4" />
-            <span className="text-sm">Setting</span>
+        <div className="px-3 py-4 space-y-1 border-t border-gray-100">
+          <div className="flex items-center gap-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg font-medium cursor-pointer">
+            <Settings className="w-4 h-4 text-gray-500" />
+            <span className="text-sm">Settings</span>
           </div>
 
           <div
             onClick={onLogout}
-            className="flex items-center gap-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded cursor-pointer"
+            className="flex items-center gap-3 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg cursor-pointer font-medium"
           >
             <LogOut className="w-4 h-4" />
             <span className="text-sm">Logout</span>

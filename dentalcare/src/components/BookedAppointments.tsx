@@ -9,7 +9,7 @@ export function BookedAppointments({ appointments }: BookedAppointmentsProps) {
     <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm h-[320px] flex flex-col">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-bold text-gray-900">
-          Booked Appointments
+          Completed Appointments
         </h3>
         <button className="text-gray-400">
           <span className="text-xl">⋮</span>

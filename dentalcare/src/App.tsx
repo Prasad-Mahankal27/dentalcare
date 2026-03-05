@@ -7,6 +7,8 @@ import ReceptionDashboard from "./pages/ReceptionDashboard";
 import VisitWorkflow from "./components/VisitWorkflow";
 import VisitDetails from "./pages/VisitDetails";
 import PatientVisitsPage from "./pages/PatientVisitPage";
+import AppointmentsPage from "./pages/AppointmentsPage";
+import DoctorsPage from "./pages/DoctorsPage";
 
 function App() {
   const [user, setUser] = useState<any>(() => {
@@ -62,6 +64,8 @@ function App() {
       {isDoctor && (
         <>
           <Route path="/doctor" element={<DoctorDashboard user={user} />} />
+          <Route path="/doctor/appointments" element={<AppointmentsPage user={user} />} />
+          <Route path="/doctor/doctors" element={<DoctorsPage user={user} />} />
           <Route path="/doctor/visit/:visitId/view" element={<VisitDetails />} />
           <Route path="/doctor/visit/:visitId/workflow" element={<VisitWorkflow token={user.token} />} />
         </>
