@@ -50,42 +50,54 @@ export function CommonDiseasesReport({ data = defaultData }: CommonDiseasesRepor
       <div className="h-52">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} barGap={4}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
             <XAxis
               dataKey="date"
               axisLine={false}
               tickLine={false}
               tick={{ fill: "#9ca3af", fontSize: 10 }}
+              dy={10}
             />
             <YAxis
               axisLine={false}
               tickLine={false}
               tick={{ fill: "#9ca3af", fontSize: 10 }}
+              dx={-10}
             />
             <Bar
               dataKey="cavities"
               fill="#60a5fa"
-              radius={[3, 3, 0, 0]}
+              radius={[4, 4, 0, 0]}
+              barSize={12}
             />
             <Bar
               dataKey="gumDisease"
               fill="#2563eb"
-              radius={[3, 3, 0, 0]}
+              radius={[4, 4, 0, 0]}
+              barSize={12}
             />
             <Bar
               dataKey="rootCanals"
               fill="#1e40af"
-              radius={[3, 3, 0, 0]}
+              radius={[4, 4, 0, 0]}
+              barSize={12}
             />
           </BarChart>
         </ResponsiveContainer>
       </div>
 
-      <div className="mt-2 flex items-center gap-4 text-xs text-gray-600">
-        <span>Recent Trend</span>
-        <div className="flex items-center gap-1">
-          <span className="w-2 h-2 rounded-full bg-blue-600"></span>
-          Common Issues
+      <div className="mt-4 flex items-center gap-6 text-xs font-medium text-gray-500">
+        <div className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full bg-blue-400" />
+          Cavities
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full bg-blue-600" />
+          Gum Disease
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full bg-blue-800" />
+          Root Canals
         </div>
       </div>
     </div>

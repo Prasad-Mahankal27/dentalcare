@@ -1,5 +1,4 @@
 import { LucideIcon } from "lucide-react";
-import { LineChart, Line, ResponsiveContainer } from "recharts";
 
 interface StatCardProps {
   icon?: LucideIcon;
@@ -17,52 +16,25 @@ export function StatCard({
   value,
   iconBgColor,
   iconColor,
-  data,
-  lineColor
 }: StatCardProps) {
-  const chartData = data
-    ? data.map((v, i) => ({ value: v, index: i }))
-    : [];
-
   return (
-    <div className="bg-white rounded-lg px-5 py-4 shadow-sm border border-gray-100">
-      <div className="flex items-center justify-between">
+    <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex flex-col justify-center h-22">
+      <div className="flex items-start justify-between">
         <div>
-          <p className="text-xs text-gray-500 leading-tight">
+          <p className="text-sm font-medium text-gray-500 mb-1">
             {label}
           </p>
-          <p className="text-xl font-bold font-semibold text-gray-900 leading-tight">
+          <p className="text-2xl font-bold text-gray-900">
             {value}
           </p>
         </div>
 
         {Icon && (
-          <div
-            className={`p-2.5 rounded-xl rounded-lg ${iconBgColor}`}
-          >
-            <Icon
-              className={iconColor}
-              size={16}
-            />
+          <div className={`p-2 rounded-lg ${iconBgColor || 'bg-gray-50'}`}>
+            <Icon className={iconColor || 'text-gray-400'} size={20} />
           </div>
         )}
       </div>
-
-      {data && lineColor && (
-        <div className="h-7 mt-1">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData}>
-              <Line
-                type="monotone"
-                dataKey="value"
-                stroke={lineColor}
-                strokeWidth={1.8}
-                dot={false}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      )}
     </div>
   );
 }

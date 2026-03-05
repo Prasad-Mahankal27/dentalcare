@@ -4,54 +4,57 @@ interface DoctorsListProps {
 
 export function DoctorsList({ doctors }: DoctorsListProps) {
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-3">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold text-gray-900">
+    <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm h-[320px] flex flex-col">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-bold text-gray-900">
           Doctors List
         </h3>
+        <button className="text-gray-400">
+          <span className="text-xl">⋮</span>
+        </button>
       </div>
 
-      <div className="max-h-[220px] overflow-y-auto">
-        <table className="w-full text-xs">
-          <thead className="sticky top-0 bg-white z-10">
-            <tr className="border-b border-gray-200">
-              <th className="text-left py-2 px-2 font-medium text-gray-500">
-                Doctor
-              </th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {doctors && doctors.length > 0 ? (
-              doctors.map((doctor: any) => (
-                <tr
-                  key={doctor.id}
-                  className="border-b border-gray-100 hover:bg-gray-50"
-                >
-                  <td className="py-2 px-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-[10px]">
-                        {doctor.name.charAt(0)}
-                      </div>
-                      <div>
-                        <div className="text-gray-800 font-medium">
-                          {doctor.name}
-                        </div>
-                        <div className="text-gray-500 text-[10px]">
-                          Role: {doctor.role || "Doctor"} | ID: {doctor.id}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td className="py-4 text-center text-gray-500">No doctors found in database.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      <div className="flex-1 overflow-y-auto">
+        {doctors && doctors.length > 0 ? (
+          <div className="space-y-4">
+            <div className="flex justify-between text-[10px] font-medium text-gray-400 border-b border-gray-50 pb-2">
+              <span>Doctor</span>
+              <span>Status</span>
+            </div>
+            {doctors.map((doc: any) => (
+              <div
+                key={doc.id}
+                className="flex items-center justify-between group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs border-2 border-white shadow-sm">
+                    {doc.name?.charAt(0) || "D"}
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-gray-800 leading-tight">
+                      {doc.name || "Dr. Ruben Bothman"}
+                    </h4>
+                    <p className="text-[10px] text-gray-400 leading-tight mt-0.5">
+                      {doc.specialization || "Dental Surgeon"}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-50">
+                  {/* Mock status for UI demo as requested */}
+                  <span className={`w-1.5 h-1.5 rounded-full ${Math.random() > 0.3 ? 'bg-green-500' : 'bg-gray-300'}`} />
+                  <span className="text-[10px] font-medium text-gray-600">
+                    {Math.random() > 0.3 ? 'Available' : 'Absent'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="h-full flex items-center justify-center text-sm text-gray-400">
+            No doctors found.
+          </div>
+        )}
       </div>
     </div>
   );

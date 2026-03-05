@@ -211,10 +211,42 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
           ) : (
             <>
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
-                <StatCard icon={CalendarCheck} label="Appointments" value={stats.appointments.toString()} />
-                <StatCard icon={Activity} label="Operations" value={stats.operations.toString()} />
-                <StatCard icon={Users} label="New Patients" value={stats.newPatients.toString()} />
-                <StatCard icon={IndianRupee} label="Earnings" value={`₹${stats.earnings}`} />
+                <StatCard 
+                  icon={CalendarCheck} 
+                  label="Appointments" 
+                  value={stats.appointments.toString()} 
+                  data={stats.appointmentTrend}
+                  lineColor="#3b82f6"
+                  iconBgColor="bg-blue-50"
+                  iconColor="text-blue-500"
+                />
+                <StatCard 
+                  icon={Activity} 
+                  label="Operations" 
+                  value={stats.operations.toString()} 
+                  data={stats.operationTrend}
+                  lineColor="#a855f7"
+                  iconBgColor="bg-purple-50"
+                  iconColor="text-purple-500"
+                />
+                <StatCard 
+                  icon={Users} 
+                  label="New Patients" 
+                  value={stats.newPatients.toString()} 
+                  data={stats.patientTrend}
+                  lineColor="#22c55e"
+                  iconBgColor="bg-green-50"
+                  iconColor="text-green-500"
+                />
+                <StatCard 
+                  icon={IndianRupee} 
+                  label="Earnings" 
+                  value={`₹${stats.earnings}`} 
+                  data={stats.earningsTrend}
+                  lineColor="#f97316"
+                  iconBgColor="bg-orange-50"
+                  iconColor="text-orange-500"
+                />
               </div>
 
               <div className="grid lg:grid-cols-2 gap-3 mb-3">
