@@ -102,7 +102,7 @@ const VisitReport: React.FC<VisitReportProps> = ({ visit, patient }) => {
         )}
 
         {/* Prescription */}
-        {medicines.length > 0 && (
+        {Array.isArray(medicines) && medicines.length > 0 && (
           <section>
             <div className="flex items-center gap-2 text-emerald-700 font-bold mb-3 border-b pb-1">
               <Pill className="w-4 h-4" />
@@ -121,9 +121,9 @@ const VisitReport: React.FC<VisitReportProps> = ({ visit, patient }) => {
                 {medicines.map((m: any, i: number) => (
                   <tr key={i} className="text-xs hover:bg-gray-50">
                     <td className="p-2 border font-medium text-gray-900">{m.name}</td>
-                    <td className="p-2 border text-gray-700">{m.dosage || "As directed"}</td>
-                    <td className="p-2 border text-gray-700">{m.frequency || "—"}</td>
-                    <td className="p-2 border text-gray-700">{m.duration || "—"}</td>
+                    <td className="p-2 border text-gray-700">{m.dosage || "-"}</td>
+                    <td className="p-2 border text-gray-700">{m.frequency || "-"}</td>
+                    <td className="p-2 border text-gray-700">{m.duration || "-"}</td>
                   </tr>
                 ))}
               </tbody>

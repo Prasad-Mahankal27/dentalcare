@@ -140,8 +140,21 @@ export default function VisitWorkflow({ token }: VisitWorkflowProps) {
     setStep2Phase("medications");
   }
 
-  function handleMedicationsFinish(_prescription: any[]) {
-    // Prescription selected — move to billing
+  async function handleMedicationsFinish(prescription: any[]) {
+    // Save doctor-confirmed medicines to backend as JSON array
+    try {
+      await fetch(`http://localhost:4000/visits/update/${visit.visitId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ medicines: JSON.stringify(prescription) }),
+      });
+      await fetchVisit(); // Refresh visit data with saved medicines
+    } catch (e) {
+      console.error("Failed to save medicines", e);
+    }
     setActiveStep(3);
   }
 

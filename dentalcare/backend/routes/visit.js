@@ -205,16 +205,16 @@ router.post(
             <head>
               <style>
                 body { font-family: 'Helvetica', 'Arial', sans-serif; padding: 40px; color: #1f2937; line-height: 1.5; }
-                .header { background: #059669; color: white; padding: 30px; border-radius: 8px; margin-bottom: 30px; text-align: center; }
-                .section { margin-bottom: 25px; border-bottom: 1px solid #f3f4f6; padding-bottom: 15px; }
+                .header { background: #059669; color: white; padding: 30px; border-radius: 8px; margin-bottom: 30px; text-align: center; page-break-after: avoid; }
+                .section { margin-bottom: 25px; border-bottom: 1px solid #f3f4f6; padding-bottom: 15px; page-break-inside: avoid; }
                 .section-title { color: #059669; font-weight: bold; margin-bottom: 10px; font-size: 18px; border-bottom: 2px solid #059669; display: inline-block; }
-                table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+                table { width: 100%; border-collapse: collapse; margin-top: 10px; page-break-inside: avoid; }
                 th, td { border: 1px solid #e5e7eb; padding: 10px; text-align: left; font-size: 12px; }
                 th { background-color: #f9fafb; color: #4b5563; font-weight: bold; }
-                .billing-box { background-color: #f9fafb; border: 1px solid #e5e7eb; padding: 20px; border-radius: 8px; }
+                .billing-box { background-color: #f9fafb; border: 1px solid #e5e7eb; padding: 20px; border-radius: 8px; page-break-inside: avoid; }
                 .billing-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 13px; }
                 .billing-total { font-weight: bold; border-top: 1px solid #e5e7eb; padding-top: 10px; margin-top: 10px; font-size: 15px; }
-                .footer { font-size: 10px; color: #9ca3af; text-align: center; margin-top: 50px; border-top: 1px solid #f3f4f6; pt: 20px; }
+                .footer { font-size: 10px; color: #9ca3af; text-align: center; margin-top: 50px; border-top: 1px solid #f3f4f6; pt: 20px; page-break-inside: avoid; }
                 .highlight { color: #059669; font-weight: bold; }
                 .pending { color: #d97706; font-weight: bold; }
               </style>
@@ -228,32 +228,66 @@ router.post(
               <div class="section">
                 <div class="section-title">Patient Information</div>
                 <table style="border:none">
-                  <tr style="border:none"><td style="border:none"><strong>Name:</strong> ${visit.patient.name}</td><td style="border:none"><strong>Patient ID:</strong> ${visit.patient.patientId}</td></tr>
-                  <tr style="border:none"><td style="border:none"><strong>Date:</strong> ${new Date(visit.createdAt).toLocaleString()}</td><td style="border:none"><strong>Visit ID:</strong> ${visit.visitId}</td></tr>
+                  <tr style="border:none">
+                    <td style="border:none"><strong>Name:</strong> ${visit.patient.name}</td>
+                    <td style="border:none"><strong>Patient ID:</strong> ${visit.patient.patientId}</td>
+                  </tr>
+                  <tr style="border:none">
+                    <td style="border:none"><strong>Date:</strong> ${new Date(visit.createdAt).toLocaleString()}</td>
+                    <td style="border:none"><strong>Visit ID:</strong> ${visit.visitId}</td>
+                  </tr>
+                  <tr style="border:none">
+                    <td style="border:none"><strong>Age/Gender:</strong> ${visit.patient.age || "-"} / ${visit.patient.gender || "-"}</td>
+                    <td style="border:none"><strong>Contact:</strong> ${visit.patient.phone || "-"}</td>
+                  </tr>
+                  <tr style="border:none">
+                    <td style="border:none" colspan="2"><strong>Address:</strong> ${visit.patient.address || "-"}</td>
+                  </tr>
+                  ${visit.patient.allergies ? `<tr style="border:none"><td style="border:none; color: #dc2626;" colspan="2"><strong>Allergies:</strong> ${visit.patient.allergies}</td></tr>` : ''}
                 </table>
               </div>
 
               <div class="section">
                 <div class="section-title">Clinical Assessment</div>
                 <p><strong>Symptoms:</strong> ${symptoms}</p>
-                <p><strong>Diagnosis:</strong> <span class="highlight">${visit.diagnosis || "—"}</span></p>
-                <p><strong>Observations:</strong> ${visit.observations || "—"}</p>
+                <p><strong>Diagnosis:</strong> <span class="highlight">${visit.diagnosis || "Not recorded."}</span></p>
+                <p><strong>Observations:</strong> ${visit.observations || "Not recorded."}</p>
+                <p><strong>Lab Tests:</strong> ${visit.labTests || "Not recorded."}</p>
+                <p><strong>Follow-up Advice:</strong> ${visit.followUpAdvice || "Not recorded."}</p>
               </div>
 
               <div class="section">
                 <div class="section-title">Treatment Plan</div>
                 <p>${visit.treatmentPlan || "As discussed with doctor."}</p>
+                <p><strong>Procedures:</strong> ${visit.procedures || "Not recorded."}</p>
               </div>
 
               ${medicines.length > 0 ? `
               <div class="section">
                 <div class="section-title">Prescription</div>
-                <table>
-                  <tr><th>Medicine</th><th>Dosage</th><th>Frequency</th><th>Duration</th></tr>
-                  ${medicines.map(m => `<tr><td><strong>${m.name}</strong></td><td>${m.dosage || "-"}</td><td>${m.frequency || "-"}</td><td>${m.duration || "-"}</td></tr>`).join('')}
+                <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                  <tr style="background-color: #f9fafb;">
+                    <th style="border: 1px solid #e5e7eb; padding: 10px; text-align: left; color: #4b5563; font-weight: bold; font-size: 12px;">Medicine Name</th>
+                    <th style="border: 1px solid #e5e7eb; padding: 10px; text-align: left; color: #4b5563; font-weight: bold; font-size: 12px;">Dosage</th>
+                    <th style="border: 1px solid #e5e7eb; padding: 10px; text-align: left; color: #4b5563; font-weight: bold; font-size: 12px;">Frequency</th>
+                    <th style="border: 1px solid #e5e7eb; padding: 10px; text-align: left; color: #4b5563; font-weight: bold; font-size: 12px;">Duration</th>
+                  </tr>
+                  ${medicines.map(m => `
+                    <tr>
+                      <td style="border: 1px solid #e5e7eb; padding: 10px; font-weight: bold; font-size: 12px;">${m.name}</td>
+                      <td style="border: 1px solid #e5e7eb; padding: 10px; font-size: 12px; color: #4b5563;">${m.dosage || "-"}</td>
+                      <td style="border: 1px solid #e5e7eb; padding: 10px; font-size: 12px; color: #4b5563;">${m.frequency || "-"}</td>
+                      <td style="border: 1px solid #e5e7eb; padding: 10px; font-size: 12px; color: #4b5563;">${m.duration || "-"}</td>
+                    </tr>
+                  `).join('')}
                 </table>
               </div>
-              ` : ''}
+              ` : `
+              <div class="section">
+                <div class="section-title">Prescription</div>
+                <p style="font-style: italic; color: #6b7280; font-size: 12px;">No medicines prescribed for this visit.</p>
+              </div>
+              `}
 
               <div class="section">
                 <div class="section-title">Billing Summary</div>

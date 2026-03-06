@@ -13,8 +13,7 @@ import {
   CreditCard,
   CheckCircle2,
   AlertCircle,
-  User,
-  Phone
+  User
 } from "lucide-react";
 
 export default function VisitDetails() {
@@ -99,42 +98,65 @@ export default function VisitDetails() {
           </div>
         </div>
 
-<div className="bg-white border rounded-lg p-6 mb-6 shadow-sm">
+        <div className="bg-white border rounded-lg p-6 mb-6 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <Calendar className="w-5 h-5 text-emerald-600" />
             <h2 className="text-lg font-semibold text-gray-800">Visit Information</h2>
           </div>
 
-          <div className="text-sm text-gray-700 mb-4 space-y-1">
-            <div>
-              <span className="font-semibold">Visit Type:</span>{" "}
-              <span className="text-gray-600">
-                {visit.visitType === "NEW" ? "New" : "Follow-up"}
-              </span>
-            </div>
-            <div>
-              <span className="font-semibold">Case Status:</span>{" "}
-              <span className="text-gray-600">
-                {visit.caseOutcome === "COMPLETED" ? "Completed" : "Ongoing"}
-              </span>
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6 text-sm">
+          <div className="grid md:grid-cols-2 gap-6 text-sm mb-6 pb-6 border-b border-gray-100">
             <div>
               <p className="text-gray-500 text-xs font-medium mb-1">Date & Time</p>
-              <p className="text-gray-800">{new Date(visit.createdAt).toLocaleString()}</p>
+              <p className="text-gray-900 font-medium">{new Date(visit.createdAt).toLocaleString()}</p>
+              
+              <div className="mt-4 flex gap-4">
+                <div>
+                  <p className="text-gray-500 text-xs font-medium mb-1">Visit Type</p>
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${visit.visitType === "NEW" ? 'bg-blue-50 text-blue-700' : 'bg-purple-50 text-purple-700'}`}>
+                    {visit.visitType === "NEW" ? "New Patient" : "Follow-up"}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-gray-500 text-xs font-medium mb-1">Status</p>
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${visit.caseOutcome === "COMPLETED" ? 'bg-emerald-50 text-emerald-700' : 'bg-orange-50 text-orange-700'}`}>
+                    {visit.caseOutcome === "COMPLETED" ? "Completed" : "Ongoing Case"}
+                  </span>
+                </div>
+              </div>
             </div>
 
-            <div>
-              <p className="text-gray-500 text-xs font-medium mb-2">Patient</p>
-              <div className="flex items-center gap-2 text-gray-800 mb-2">
-                <User className="w-4 h-4 text-gray-400" />
-                <span>{visit.patient.name}</span>
-              </div>
-              <div className="flex items-center gap-2 text-gray-600">
-                <Phone className="w-4 h-4 text-gray-400" />
-                <span>{visit.patient.phone}</span>
+            <div className="bg-gray-50 border border-gray-100 rounded-lg p-4">
+              <p className="text-gray-800 font-bold mb-3 flex items-center gap-2">
+                <User className="w-4 h-4 text-emerald-600" />
+                Patient Details
+              </p>
+              <div className="space-y-2">
+                <div className="grid grid-cols-3 gap-2">
+                  <span className="text-gray-500">Name:</span>
+                  <span className="col-span-2 font-medium text-gray-900">{visit.patient.name}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <span className="text-gray-500">Age/Gender:</span>
+                  <span className="col-span-2 text-gray-900">{visit.patient.age} / {visit.patient.gender}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <span className="text-gray-500">Contact:</span>
+                  <span className="col-span-2 text-gray-900 flex items-center gap-1.5">
+                    {visit.patient.phone}
+                  </span>
+                </div>
+                {visit.patient.address && (
+                  <div className="grid grid-cols-3 gap-2">
+                    <span className="text-gray-500">Address:</span>
+                    <span className="col-span-2 text-gray-900">{visit.patient.address}</span>
+                  </div>
+                )}
+                {visit.patient.allergies && (
+                  <div className="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-red-100">
+                    <span className="text-red-500 font-medium">Allergies:</span>
+                    <span className="col-span-2 text-red-600 font-medium">{visit.patient.allergies}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -147,23 +169,71 @@ export default function VisitDetails() {
           </h2>
 
           <div className="space-y-6">
-            {clinicalFields.map(({ key, label, icon: Icon }) => (
-              <div key={key} className="border-l-4 border-emerald-500 pl-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Icon className="w-4 h-4 text-emerald-600" />
-                  <span className="text-xs uppercase font-semibold">
-                    {label}
-                  </span>
+            {clinicalFields.map(({ key, label, icon: Icon }) => {
+              if (key === 'medicines') {
+                let parsedMedicines = [];
+                try {
+                  parsedMedicines = visit.medicines ? JSON.parse(visit.medicines) : [];
+                } catch (e) {
+                  console.error("Failed to parse medicines", e);
+                }
+
+                return (
+                  <div key={key} className="border-l-4 border-indigo-500 pl-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Icon className="w-4 h-4 text-indigo-600" />
+                      <span className="text-xs uppercase font-bold text-indigo-900">
+                        {label}
+                      </span>
+                    </div>
+                    {parsedMedicines && parsedMedicines.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200 border rounded-lg overflow-hidden">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Medicine Name</th>
+                              <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Dosage</th>
+                              <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Frequency</th>
+                              <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Duration</th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {parsedMedicines.map((med: any, idx: number) => (
+                              <tr key={idx} className="hover:bg-gray-50">
+                                <td className="px-4 py-2.5 text-sm font-medium text-gray-900">{med.name}</td>
+                                <td className="px-4 py-2.5 text-sm text-gray-600">{med.dosage || "-"}</td>
+                                <td className="px-4 py-2.5 text-sm text-gray-600">{med.frequency || "-"}</td>
+                                <td className="px-4 py-2.5 text-sm text-gray-600">{med.duration || "-"}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <p className="italic text-gray-400 text-sm">No medicines prescribed</p>
+                    )}
+                  </div>
+                );
+              }
+
+              return (
+                <div key={key} className="border-l-4 border-emerald-500 pl-4 bg-emerald-50/30 py-2 pr-2 rounded-r-lg">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <Icon className="w-4 h-4 text-emerald-600" />
+                    <span className="text-xs uppercase font-bold text-emerald-900">
+                      {label}
+                    </span>
+                  </div>
+                  {visit[key] ? (
+                    <p className="text-gray-800 text-sm leading-relaxed whitespace-pre-wrap">{visit[key]}</p>
+                  ) : (
+                    <p className="italic text-gray-400 text-sm">
+                      Not recorded
+                    </p>
+                  )}
                 </div>
-                {visit[key] ? (
-                  <p>{visit[key]}</p>
-                ) : (
-                  <p className="italic text-gray-400 text-sm">
-                    Not recorded
-                  </p>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
