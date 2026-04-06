@@ -1,0 +1,38 @@
+%%{init: {"theme": "base", "themeVariables": {"background": "#ffffff", "primaryColor": "#ffffff", "secondaryColor": "#ffffff", "tertiaryColor": "#ffffff"}}}%%
+flowchart TD
+    %% Global Styles
+    classDef main fill:#ffffff,stroke:#000000,stroke-width:3px,color:#000000,font-weight:bold;
+    classDef process fill:#ffffff,stroke:#333333,stroke-width:2px,color:#000000;
+    classDef feedback fill:#e1f5fe,stroke:#01579b,stroke-width:2px,color:#01579b;
+    classDef artifact fill:#fff3e0,stroke:#e65100,stroke-width:2px,color:#e65100,font-weight:bold;
+
+    %% AGILE FEEDBACK LOOP
+    Backlog[("<b>PRODUCT BACKLOG</b><br/>Medical Features, AI Extraction,<br/>Payment Integration")]
+    
+    subgraph SprintCycle ["<b>THE RECURSIVE SPRINT</b>"]
+        direction TB
+        Planning["<b>1. SPRINT PLANNING</b><br/>Allocating tasks for Frontend, AI,<br/>and multi-module Backend"]
+        
+        Development["<b>2. DEVELOPMENT & DESIGN</b><br/>Modular coding across Node, Python,<br/>React, and Electron frameworks"]
+        
+        Testing["<b>3. MULTI-LAYER TESTING</b><br/>Vitest -UI-, Jest -Backend-,<br/>and AI Accuracy Validation"]
+        
+        Review["<b>4. SPRINT REVIEW / DEMO</b><br/>Showcasing functional Electron<br/>builds and AI features"]
+        
+        Retro["<b>5. RETROSPECTIVE</b><br/>Optimizing tooling like kill_ports.py<br/>and dev orchestration"]
+
+        %% Iterative connections
+        Planning ==> Development ==> Testing ==> Review ==> Retro ==> Planning
+    end
+
+    %% EXTERNAL OUTPUTS
+    Backlog ==> Planning
+    Review ==> Release[["<b>POTENTIAL SHIPMENT</b><br/>Electron Installers (DMG/EXE),<br/>Backend Cloud Deployments"]]
+    Retro -.-> Backlog
+
+    %% Applying Classes
+    class Backlog artifact;
+    class Planning,Development,Testing,Review,Retro process;
+    class Release main;
+    class SprintCycle feedback;
+    style SprintCycle fill:#ffffff,stroke:#01579b,stroke-width:2px;

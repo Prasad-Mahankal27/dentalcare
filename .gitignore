@@ -26,7 +26,7 @@ yarn-error.log*
 *.log
 logs/
 
-# Python
+# Python & Virtual Environments
 __pycache__/
 *.py[cod]
 *$py.class
@@ -35,15 +35,10 @@ venv/
 ENV/
 *.venv
 pyvenv.cfg
+dental/
+ai-service/venv/
 
-# Databases
-*.db
-*.sqlite
-*.sqlite3
-*.db-journal
-*.db-shm
-*.db-wal
-*.backup-*
+
 
 # Multimedia and transient assets
 # (adjust if you need to keep specific .wav or .png files)
