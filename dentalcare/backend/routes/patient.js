@@ -48,32 +48,20 @@ router.get(
   async (req, res) => {
     const { query } = req.query;
 
-    if (!query) {
-      return res.status(400).json({ message: "Search query required" });
-    }
-
-    const trimmedQuery = query.trim();
-
-    const patients = await prisma.patient.findMany({
+    const patient = await prisma.patient.findFirst({
       where: {
         OR: [
-          { patientId: { contains: trimmedQuery } },
-          { phone: { contains: trimmedQuery } },
-          { name: { contains: trimmedQuery } }
+          { patientId: query },
+          { phone: query }
         ]
-      },
-      take: 10
+      }
     });
 
-    if (patients.length === 0) {
+    if (!patient) {
       return res.status(404).json({ message: "Patient not found" });
     }
 
-    // If it's a single exact match for ID or Phone, return object, else array
-    // However, the frontend seems to expect a single object based on findFirst
-    // Let's keep it consistent but prioritize exact ID/Phone matches
-    const exactMatch = patients.find(p => p.patientId === trimmedQuery || p.phone === trimmedQuery);
-    res.json(exactMatch || patients[0]);
+    res.json(patient);
   }
 );
 

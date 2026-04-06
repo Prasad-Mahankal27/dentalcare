@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useState, useEffect } from "react";
 import {
   FileText,
   CheckCircle,
@@ -9,77 +9,37 @@ import {
   ArrowRight,
   ArrowLeft
 } from "lucide-react";
-
-interface BillingVisit {
-  id?: number | string;
-  previousPending?: number;
-}
+import { QRCodeSVG } from "qrcode.react";
 
 interface Props {
-  visit?: BillingVisit | null;
+  visit: any;
   token: string;
   onBillingDone?: () => void;
 }
-
-type VerificationMode = "AUTO" | "MANUAL" | null;
-
-const UPI_PAY_BASE_URL = (
-  import.meta.env.VITE_UPI_PAY_BASE_URL || "http://localhost:3002"
-).replace(/\/$/, "");
-const QR_EXPIRY_MS = 5 * 60 * 1000;
 
 export default function BillingForm({
   visit,
   token,
   onBillingDone
 }: Props) {
+
   const [step, setStep] = useState<1 | 2>(1);
   const [currentCharges, setCurrentCharges] = useState(0);
   const [discount, setDiscount] = useState(0);
   const [paidAmount, setPaidAmount] = useState(0);
   const [pendingCleared, setPendingCleared] = useState(0);
 
-  const [firstName, setFirstName] = useState("");
-  const [middleName, setMiddleName] = useState("");
-  const [lastName, setLastName] = useState("");
-
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-
-  const [qrLoading, setQrLoading] = useState(false);
-  const [manualApproving, setManualApproving] = useState(false);
-  const [checkingStatus, setCheckingStatus] = useState(false);
-
+  
+  // Payment verification simulation states
+  const [verifying, setVerifying] = useState(false);
   const [paymentVerified, setPaymentVerified] = useState(false);
-  const [verificationMode, setVerificationMode] = useState<VerificationMode>(null);
-  const [statusMessage, setStatusMessage] = useState("Generate QR to start verification.");
-  const [orderId, setOrderId] = useState<string | null>(null);
-  const [qrImage, setQrImage] = useState("");
-  const [dynamicUpiId, setDynamicUpiId] = useState("");
-  const [gatewayAmount, setGatewayAmount] = useState<number | null>(null);
-  const [qrCreatedAt, setQrCreatedAt] = useState<number | null>(null);
-  const [qrExpiresIn, setQrExpiresIn] = useState("");
-  const [qrExpired, setQrExpired] = useState(false);
-
-  const statusPollerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const hasPlayedCompletionRef = useRef(false);
 
   const previousPending = visit?.previousPending || 0;
 
   const visitTotal = Math.max(currentCharges - discount, 0);
   const visitPending = Math.max(visitTotal - paidAmount, 0);
-  const totalToPay = paidAmount + pendingCleared;
-
-  const payerFullName = [firstName.trim(), middleName.trim(), lastName.trim()]
-    .filter(Boolean)
-    .join(" ");
-  const isPayerNameValid = firstName.trim().length > 0 && lastName.trim().length > 0;
-  const requiresPayment = totalToPay > 0;
-  const payableForQr = gatewayAmount ?? totalToPay;
-  const displayedUpiId = dynamicUpiId || "UPI ID will appear after QR generation";
-
-  const gatewayBusy = qrLoading || manualApproving;
 
   const updatedPending = Math.max(
     previousPending - pendingCleared + visitPending,
@@ -94,317 +54,27 @@ export default function BillingForm({
     paidAmount <= visitTotal &&
     pendingCleared >= 0 &&
     pendingCleared <= previousPending &&
-    (!requiresPayment || (isPayerNameValid && paymentVerified));
+    ((paidAmount + pendingCleared) === 0 || paymentVerified); // Require verification if there's a payment
 
-  function getErrorMessage(error: unknown, fallback: string) {
-    return error instanceof Error ? error.message : fallback;
-  }
+  const totalToPay = paidAmount + pendingCleared;
 
-  function stopStatusPolling() {
-    if (statusPollerRef.current) {
-      clearInterval(statusPollerRef.current);
-      statusPollerRef.current = null;
-    }
-    setCheckingStatus(false);
-  }
-
-  const ensureAudioContext = useCallback(() => {
-    if (typeof window === "undefined") {
-      return null;
-    }
-
-    const browserWindow = window as Window & {
-      webkitAudioContext?: typeof AudioContext;
-    };
-
-    const AudioContextClass =
-      window.AudioContext || browserWindow.webkitAudioContext;
-
-    if (!AudioContextClass) {
-      return null;
-    }
-
-    if (!audioContextRef.current) {
-      audioContextRef.current = new AudioContextClass();
-    }
-
-    return audioContextRef.current;
-  }, []);
-
-  const primeAudioPlayback = useCallback(() => {
-    const audioContext = ensureAudioContext();
-
-    if (!audioContext || audioContext.state !== "suspended") {
-      return;
-    }
-
-    void audioContext.resume().catch(() => {
-      // Ignore browsers that still block audio until a later gesture.
-    });
-  }, [ensureAudioContext]);
-
-  const playPaymentCompletedChime = useCallback(async () => {
-    const audioContext = ensureAudioContext();
-
-    if (!audioContext) {
-      return;
-    }
-
-    if (audioContext.state === "suspended") {
-      try {
-        await audioContext.resume();
-      } catch {
-        return;
-      }
-    }
-
-    const masterGain = audioContext.createGain();
-    const startTime = audioContext.currentTime + 0.02;
-
-    masterGain.gain.setValueAtTime(0.0001, startTime);
-    masterGain.gain.exponentialRampToValueAtTime(0.18, startTime + 0.04);
-    masterGain.gain.exponentialRampToValueAtTime(0.0001, startTime + 1.2);
-    masterGain.connect(audioContext.destination);
-
-    const notes = [
-      { frequency: 783.99, duration: 0.24, delay: 0 },
-      { frequency: 987.77, duration: 0.3, delay: 0.16 },
-      { frequency: 1174.66, duration: 0.42, delay: 0.34 }
-    ];
-
-    notes.forEach(note => {
-      const oscillator = audioContext.createOscillator();
-      const noteGain = audioContext.createGain();
-      const noteStart = startTime + note.delay;
-
-      oscillator.type = "sine";
-      oscillator.frequency.setValueAtTime(note.frequency, noteStart);
-
-      noteGain.gain.setValueAtTime(0.0001, noteStart);
-      noteGain.gain.exponentialRampToValueAtTime(0.6, noteStart + 0.03);
-      noteGain.gain.exponentialRampToValueAtTime(0.0001, noteStart + note.duration);
-
-      oscillator.connect(noteGain);
-      noteGain.connect(masterGain);
-      oscillator.start(noteStart);
-      oscillator.stop(noteStart + note.duration);
-      oscillator.onended = () => {
-        oscillator.disconnect();
-        noteGain.disconnect();
-      };
-    });
-
-    window.setTimeout(() => {
-      masterGain.disconnect();
-    }, 1400);
-  }, [ensureAudioContext]);
-
-  function markPaymentCompleted(mode: Exclude<VerificationMode, null>, message: string) {
-    stopStatusPolling();
-    setPaymentVerified(true);
-    setVerificationMode(mode);
-    setStatusMessage(message);
-  }
-
-  function startStatusPolling(activeOrderId: string) {
-    stopStatusPolling();
-    setCheckingStatus(true);
-
-    statusPollerRef.current = setInterval(async () => {
-      try {
-        const res = await fetch(`${UPI_PAY_BASE_URL}/status/${activeOrderId}`);
-        const data = await res.json();
-
-        if (res.ok && data.status === "PAID") {
-          markPaymentCompleted("AUTO", "Payment completed and auto-verified from bank notification.");
-        }
-      } catch {
-        // Keep polling; transient network issues should not block verification.
-      }
-    }, 2000);
-  }
-
-  // Reset verification artifacts if payer details or payable amount changes.
+  // Reset verification if amount changes
   useEffect(() => {
-    stopStatusPolling();
     setPaymentVerified(false);
-    setVerificationMode(null);
-    setOrderId(null);
-    setQrImage("");
-    setDynamicUpiId("");
-    setGatewayAmount(null);
-    setQrCreatedAt(null);
-    setQrExpiresIn("");
-    setQrExpired(false);
-    setStatusMessage("Generate QR to start verification.");
-  }, [firstName, middleName, lastName, totalToPay]);
+  }, [totalToPay]);
 
-  useEffect(() => {
-    return () => {
-      stopStatusPolling();
+  // Construct UPI intent URI
+  // Uses the actual doctor UPI ID provided
+  const upiId = "prasad.mahankal@okaxis";
+  const upiName = "Prasad Ajay Mahankal";
+  const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(upiName)}&am=${totalToPay}&cu=INR`;
 
-      if (audioContextRef.current) {
-        void audioContextRef.current.close().catch(() => {
-          // Ignore cleanup failures during unmount.
-        });
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!paymentVerified) {
-      hasPlayedCompletionRef.current = false;
-      return;
-    }
-
-    if (hasPlayedCompletionRef.current) {
-      return;
-    }
-
-    hasPlayedCompletionRef.current = true;
-    void playPaymentCompletedChime();
-  }, [paymentVerified, playPaymentCompletedChime]);
-
-  useEffect(() => {
-    if (!qrCreatedAt || paymentVerified || !qrImage) {
-      if (!qrImage) {
-        setQrExpiresIn("");
-      }
-      return;
-    }
-
-    const updateExpiry = () => {
-      const remaining = QR_EXPIRY_MS - (Date.now() - qrCreatedAt);
-
-      if (remaining <= 0) {
-        if (!qrExpired) {
-          setQrExpired(true);
-          setQrExpiresIn("QR Expired");
-          setStatusMessage("QR expired. Generate a new QR to continue.");
-          stopStatusPolling();
-        }
-        return false;
-      }
-
-      const minutes = Math.floor(remaining / 60000);
-      const seconds = Math.floor((remaining % 60000) / 1000);
-
-      setQrExpired(false);
-      setQrExpiresIn(`Expires in ${minutes}:${seconds.toString().padStart(2, "0")}`);
-      return true;
-    };
-
-    if (!updateExpiry()) {
-      return;
-    }
-
-    const intervalId = window.setInterval(() => {
-      if (!updateExpiry()) {
-        window.clearInterval(intervalId);
-      }
-    }, 1000);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [paymentVerified, qrCreatedAt, qrExpired, qrImage]);
-
-  async function generateDynamicQr() {
-    if (!isPayerNameValid) {
-      alert("Please enter first and last name as per Aadhaar.");
-      return;
-    }
-
-    if (totalToPay <= 0) {
-      alert("Total payable amount should be greater than 0.");
-      return;
-    }
-
-    try {
-      primeAudioPlayback();
-      stopStatusPolling();
-      setQrLoading(true);
-      setPaymentVerified(false);
-      setVerificationMode(null);
-      setQrExpired(false);
-      setQrExpiresIn("");
-      setStatusMessage("Creating unique UPI order...");
-
-      const res = await fetch(`${UPI_PAY_BASE_URL}/create-payment`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          firstName: firstName.trim(),
-          middleName: middleName.trim() || undefined,
-          lastName: lastName.trim(),
-          amount: totalToPay.toFixed(2)
-        })
-      });
-
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to generate QR code");
-      }
-
-      if (!data.orderId || !data.qr) {
-        throw new Error("Invalid payment gateway response");
-      }
-
-      const resolvedUpiId =
-        typeof data.upiId === "string" ? data.upiId.trim() : "";
-
-      if (!resolvedUpiId) {
-        throw new Error("Payment gateway did not return a configured UPI ID");
-      }
-
-      const finalAmount = Number(data.finalAmount);
-      const resolvedCreatedAt = Number(data.createdAt);
-
-      setOrderId(data.orderId);
-      setQrImage(data.qr);
-      setDynamicUpiId(resolvedUpiId);
-      setGatewayAmount(Number.isFinite(finalAmount) ? finalAmount : totalToPay);
-      setQrCreatedAt(Number.isFinite(resolvedCreatedAt) ? resolvedCreatedAt : Date.now());
-      setStatusMessage("Waiting for payment...");
-
-      startStatusPolling(data.orderId);
-    } catch (err: unknown) {
-      setStatusMessage("Unable to generate QR. Please retry.");
-      alert(getErrorMessage(err, "Unable to generate payment QR"));
-    } finally {
-      setQrLoading(false);
-    }
-  }
-
-  async function approvePaymentManually() {
-    if (!orderId) {
-      alert("Generate QR first, then approve payment manually.");
-      return;
-    }
-
-    try {
-      primeAudioPlayback();
-      setManualApproving(true);
-
-      const res = await fetch(`${UPI_PAY_BASE_URL}/manual-verify/${orderId}`, {
-        method: "POST"
-      });
-
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        throw new Error(data.error || "Manual verification failed");
-      }
-
-      markPaymentCompleted("MANUAL", "Payment completed and approved by clinic staff.");
-    } catch (err: unknown) {
-      alert(getErrorMessage(err, "Failed to approve payment manually"));
-    } finally {
-      setManualApproving(false);
-    }
+  async function simulatePaymentVerification() {
+    setVerifying(true);
+    // Simulate a network delay for checking the payment gateway
+    await new Promise(resolve => setTimeout(resolve, 2500));
+    setPaymentVerified(true);
+    setVerifying(false);
   }
 
   async function submitBilling() {
@@ -443,26 +113,11 @@ export default function BillingForm({
       setSubmitted(true);
       onBillingDone?.();
 
-    } catch (err: unknown) {
-      alert(getErrorMessage(err, "Billing failed"));
+    } catch (err: any) {
+      alert(err.message || "Billing failed");
     } finally {
       setLoading(false);
     }
-  }
-
-  async function proceedToPayment() {
-    if (requiresPayment && !isPayerNameValid) {
-      alert("Please fill first and last name before proceeding to payment.");
-      return;
-    }
-
-    setStep(2);
-
-    if (!requiresPayment || qrImage || orderId || gatewayBusy || paymentVerified) {
-      return;
-    }
-
-    await generateDynamicQr();
   }
 
   return (
@@ -584,67 +239,18 @@ export default function BillingForm({
                 </div>
               </div>
             </div>
-
-            <div>
-              <h3 className="text-sm font-bold text-gray-900 border-b pb-2 mb-4">Payer Name (Aadhaar)</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
-                    First Name
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-3 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-shadow"
-                    value={firstName}
-                    onChange={e => setFirstName(e.target.value)}
-                    placeholder="First name"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
-                    Middle Name
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-3 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-shadow"
-                    value={middleName}
-                    onChange={e => setMiddleName(e.target.value)}
-                    placeholder="Middle name (optional)"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
-                    Last Name
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-3 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-shadow"
-                    value={lastName}
-                    onChange={e => setLastName(e.target.value)}
-                    placeholder="Last name"
-                  />
-                </div>
-              </div>
-              <p className="text-xs text-gray-500 mt-2">
-                First and last name are required to match bank notification format.
-              </p>
-            </div>
             
             <div className="pt-4 flex flex-col gap-4 items-end">
               <div className="text-right pb-4">
                  <p className="text-sm text-gray-500 mb-1">Total to collect from patient:</p>
-                 <p className="text-2xl font-bold text-gray-900">₹{totalToPay.toFixed(2)}</p>
+                 <p className="text-2xl font-bold text-gray-900">₹{totalToPay}</p>
               </div>
               <button
-                onClick={() => {
-                  void proceedToPayment();
-                }}
-                disabled={(currentCharges === 0 && pendingCleared === 0) || gatewayBusy}
+                onClick={() => setStep(2)}
+                disabled={currentCharges === 0 && pendingCleared === 0}
                 className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-lg font-bold transition-transform active:scale-95 disabled:opacity-50"
               >
-                {requiresPayment ? "Proceed to Payment & Generate QR" : "Proceed to Payment"}
+                Proceed to Payment
                 <ArrowRight className="w-5 h-5" />
               </button>
             </div>
@@ -678,20 +284,8 @@ export default function BillingForm({
                     )}
                     <div className="border-t border-gray-200 pt-4 flex justify-between text-gray-900 font-bold text-base">
                       <span>Total Amount Paid</span>
-                      <span className="text-emerald-600">₹{totalToPay.toFixed(2)}</span>
+                      <span className="text-emerald-600">₹{totalToPay}</span>
                     </div>
-                    {requiresPayment && (
-                      <>
-                        <div className="flex justify-between text-gray-600">
-                          <span>Payer Name</span>
-                          <span className="font-medium text-right">{payerFullName || "-"}</span>
-                        </div>
-                        <div className="flex justify-between text-gray-600">
-                          <span>Gateway Final Amount</span>
-                          <span className="font-medium text-indigo-600">₹{payableForQr.toFixed(2)}</span>
-                        </div>
-                      </>
-                    )}
                   </div>
                   
                   <div className={`mt-6 rounded-lg p-4 flex justify-between items-center bg-white border ${
@@ -725,133 +319,56 @@ export default function BillingForm({
               </div>
 
               {/* QR Code Section */}
-              <div className="rounded-[28px] bg-[#e9edf2] p-6 shadow-inner">
-                <div className={`mx-auto flex max-w-[380px] flex-col items-center text-center ${totalToPay > 0 ? "opacity-100" : "opacity-40"}`}>
-                  <div className="w-full rounded-[30px] bg-white px-6 py-8 shadow-[0_10px_30px_rgba(0,0,0,0.10)]">
-                    {paymentVerified ? (
-                      <div
-                        role="status"
-                        className="flex min-h-[470px] flex-col items-center justify-center text-center"
-                      >
-                        <div className="relative flex h-24 w-24 items-center justify-center">
-                          <span className="absolute inset-0 rounded-full bg-emerald-200/80 animate-ping" />
-                          <span className="absolute inset-[10px] rounded-full bg-emerald-100 animate-pulse" />
-                          <span className="relative flex h-24 w-24 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-300/70">
-                            <ShieldCheck className="h-12 w-12 animate-bounce" />
-                          </span>
-                        </div>
-                        <p className="mt-8 text-3xl font-extrabold text-emerald-600">
-                          Payment Completed
-                        </p>
-                        <p className="mt-3 text-lg font-semibold text-gray-700">
-                          {verificationMode === "MANUAL" ? "Verified manually by clinic staff" : "Verified automatically from bank notification"}
-                        </p>
-                        <p className="mt-4 text-4xl font-black text-gray-900">
-                          ₹{payableForQr.toFixed(2)}
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="flex min-h-[470px] flex-col items-center justify-center">
-                        <div className="relative inline-block">
-                          {qrImage ? (
-                            <>
-                              <img
-                                src={qrImage}
-                                alt="Dynamic payment QR"
-                                className={`h-[260px] w-[260px] object-contain transition-opacity duration-300 ${qrExpired ? "opacity-20" : "opacity-100"}`}
-                              />
-                              <img
-                                src="/gpay.gif"
-                                alt="Google Pay"
-                                className="absolute left-1/2 top-1/2 h-[60px] w-[60px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white p-2 shadow-sm object-contain"
-                              />
-                            </>
-                          ) : (
-                            <div className="flex h-[260px] w-[260px] items-center justify-center rounded-xl border border-dashed border-gray-300 bg-gray-50 px-8">
-                              <div className="flex flex-col items-center gap-3 text-center text-gray-500">
-                                <QrCode className="h-10 w-10 text-gray-400" />
-                                <span className="text-sm font-medium">Generate QR to begin payment</span>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        {qrImage && (
-                          <>
-                            <p className="mt-7 text-[18px] font-medium text-gray-600">
-                              UPI ID: {displayedUpiId}
-                            </p>
-                            <p className="mt-4 text-[22px] font-black text-black">
-                              Pay exactly: ₹{payableForQr.toFixed(2)}
-                            </p>
-                            <p className={`mt-5 text-[18px] font-medium ${qrExpired ? "text-red-700" : "text-[#d93025]"}`}>
-                              {qrExpiresIn}
-                            </p>
-                            <p className={`mt-8 text-[22px] font-semibold ${qrExpired ? "text-red-600" : "text-gray-600"}`}>
-                              {qrExpired ? "QR expired" : statusMessage}
-                            </p>
-                          </>
-                        )}
-
-                        {!qrImage && (
-                          <p className="mt-8 text-lg font-medium text-gray-500">
-                            Your dynamic QR will appear here.
-                          </p>
-                        )}
+              <div className="border border-gray-100 rounded-xl p-8 flex flex-col items-center justify-center text-center bg-white shadow-sm">
+                <div className="flex flex-col items-center gap-2 mb-6">
+                  <div className="p-3 bg-indigo-50 rounded-full">
+                    <QrCode className="w-6 h-6 text-indigo-600" />
+                  </div>
+                  <span className="font-bold text-gray-900 text-lg">Scan & Pay</span>
+                  <span className="text-sm text-gray-500">Scan via Google Pay, PhonePe, etc.</span>
+                </div>
+                
+                <div className={`transition-opacity duration-300 ${totalToPay > 0 ? 'opacity-100' : 'opacity-30 pointer-events-none'}`}>
+                  <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4 mx-auto relative group flex items-center justify-center">
+                    <QRCodeSVG 
+                      value={upiUrl} 
+                      size={180}
+                      level="Q"
+                      includeMargin={false}
+                    />
+                    {totalToPay === 0 && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-white/70 rounded-2xl backdrop-blur-[1px]">
+                        <span className="text-xs font-bold text-gray-700 bg-white px-3 py-1.5 rounded-full shadow-sm border border-gray-200">No Payment Required</span>
                       </div>
                     )}
                   </div>
-
-                  <p className="mt-7 text-[18px] font-medium text-black">
-                    Scan to pay with any UPI app
+                  <p className="text-xs text-gray-500 font-mono bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100 inline-block">
+                    {upiId}
                   </p>
-
-                  {orderId && !paymentVerified && (
-                    <p className="mt-2 text-xs text-gray-500">Order ID: {orderId}</p>
-                  )}
                 </div>
 
                 {totalToPay > 0 && (
-                  <div className="mx-auto mt-8 max-w-[380px] space-y-3">
-                    <button
-                      onClick={generateDynamicQr}
-                      disabled={gatewayBusy || !isPayerNameValid}
-                      className="w-full flex justify-center items-center gap-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 py-3 rounded-xl text-sm font-bold transition-colors disabled:opacity-50 border border-indigo-200"
-                    >
-                      {qrLoading ? (
-                        <>
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                          Generating Dynamic QR...
-                        </>
-                      ) : (
-                        qrImage ? "Regenerate Dynamic QR" : "Generate Dynamic QR"
-                      )}
-                    </button>
-
-                    {!paymentVerified && (
-                      <>
-                        <button
-                          onClick={approvePaymentManually}
-                          disabled={gatewayBusy || !orderId || qrExpired}
-                          className="w-full flex justify-center items-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 py-3 rounded-xl text-sm font-bold transition-colors disabled:opacity-50 border border-emerald-200"
-                        >
-                          {manualApproving ? (
-                            <>
-                              <Loader2 className="w-5 h-5 animate-spin" />
-                              Approving Payment...
-                            </>
-                          ) : (
-                            "Approve Payment Manually"
-                          )}
-                        </button>
-
-                        {checkingStatus && !qrExpired && (
-                          <div className="w-full flex items-center justify-center gap-2 text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-xl py-2 px-3">
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            Auto-checking bank notification...
-                          </div>
+                  <div className="mt-8 w-full">
+                    {paymentVerified ? (
+                      <div className="flex flex-col items-center justify-center py-3 text-emerald-600 bg-emerald-50 rounded-xl border border-emerald-100">
+                        <ShieldCheck className="w-8 h-8 mb-1.5" />
+                        <span className="text-sm font-bold">Payment Verified!</span>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={simulatePaymentVerification}
+                        disabled={verifying}
+                        className="w-full flex justify-center items-center gap-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 py-3 rounded-xl text-sm font-bold transition-colors disabled:opacity-50 border border-indigo-200"
+                      >
+                        {verifying ? (
+                          <>
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            Checking Gateway...
+                          </>
+                        ) : (
+                          "Verify UPI Payment"
                         )}
-                      </>
+                      </button>
                     )}
                   </div>
                 )}

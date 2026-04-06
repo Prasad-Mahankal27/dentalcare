@@ -6,8 +6,8 @@ Audio is recorded in real-time and stored as a WAV file.
 import threading
 import numpy as np
 import sounddevice as sd
+import scipy.io.wavfile as wav
 import os
-import wave
 
 SAMPLE_RATE = 16000
 CHANNELS = 1
@@ -74,15 +74,7 @@ def stop() -> str:
         raise RuntimeError("No audio was captured.")
 
     audio_data = np.concatenate(chunks, axis=0)
-    audio_data = np.asarray(audio_data, dtype=np.int16)
-
-    # Write PCM16 WAV without external scipy dependency.
-    with wave.open(AUDIO_FILE, "wb") as wav_file:
-        wav_file.setnchannels(CHANNELS)
-        wav_file.setsampwidth(2)
-        wav_file.setframerate(SAMPLE_RATE)
-        wav_file.writeframes(audio_data.tobytes())
-
+    wav.write(AUDIO_FILE, SAMPLE_RATE, audio_data)
     print(f"[Recorder] Audio saved to {AUDIO_FILE} ({len(audio_data)} samples)")
     return AUDIO_FILE
 
