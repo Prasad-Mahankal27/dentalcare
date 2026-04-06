@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>UPI Payment</title>
+
+  <style>
+    body {
+      font-family: system-ui, -apple-system;
+      background: #e9edf2;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      flex-direction: column;
+    }
+
+    .nameHeader {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      font-size: 30px;
+      font-weight: 500;
+    }
+
+    .avatar {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .card {
+      background: white;
+      border-radius: 30px;
+      padding: 30px;
+      width: 340px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .qrWrap {
+      position: relative;
+      display: inline-block;
+      transition: opacity 0.5s;
+    }
+
+    .qrWrap img.qr {
+      width: 260px;
+      transition: 0.3s;
+    }
+
+    .logo {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      border-radius: 50%;
+      padding: 8px;
+    }
+
+    .info {
+      margin-top: 15px;
+      font-size: 15px;
+      color: #666;
+      line-height: 1.6;
+    }
+
+    .amountText {
+      font-size: 20px;
+      font-weight: 600;
+      color: #111;
+      margin-top: 6px;
+    }
+
+    .timer {
+      font-size: 18px;
+      color: #d93025;
+      margin-top: 8px;
+    }
+
+    .status {
+      font-size: 18px;
+      font-weight: 600;
+      margin-top: 8px;
+    }
+
+    input, button {
+      padding: 10px 14px;
+      margin: 6px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .name-inputs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .name-inputs input {
+      width: 120px;
+    }
+
+    .form-hint {
+      font-size: 12px;
+      color: #666;
+      margin-top: 4px;
+    }
+
+    button {
+      background: #1a73e8;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    /* Success Animation */
+    .success-container {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: white;
+      z-index: 10;
+      animation: fadeIn 0.5s;
+    }
+
+    .checkmark-circle {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: #4CAF50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      animation: popIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    }
+
+    .checkmark {
+      width: 40px;
+      height: 20px;
+      border-left: 5px solid white;
+      border-bottom: 5px solid white;
+      transform: rotate(-45deg) translate(2px, -2px);
+    }
+
+    .success-text {
+      color: #4CAF50;
+      font-size: 24px;
+      font-weight: 600;
+    }
+
+    .success-amount {
+      font-size: 32px;
+      font-weight: 700;
+      color: #333;
+      margin-top: 10px;
+    }
+
+    @keyframes popIn {
+      0% { transform: scale(0); }
+      80% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- NAME INPUTS (as per Aadhaar) -->
+<div class="form-group">
+  <div class="name-inputs">
+    <input id="firstName" placeholder="First Name">
+    <input id="middleName" placeholder="Middle Name">
+    <input id="lastName" placeholder="Last Name">
+  </div>
+  <div class="form-hint">Enter name exactly as on Aadhaar card</div>
+</div>
+
+<div class="form-group">
+  <input id="amount" placeholder="Enter amount ₹" type="number" style="width: 200px;">
+  <input id="upiId" placeholder="Sender UPI ID (Optional)" style="width: 200px;">
+  <input id="upiName" placeholder="Sender UPI Name (Optional)" style="width: 200px;">
+  <button onclick="generate()">Generate QR</button>
+</div>
+
+<div class="nameHeader">
+  <img src="avatar.png" class="avatar">
+  <span id="nameText">ABHIBHOO ANAND</span>
+</div>
+
+<div class="card" id="card" style="display:none">
+
+  <!-- SUCCESS UI -->
+  <div id="successUI" class="success-container">
+    <div class="checkmark-circle">
+      <div class="checkmark"></div>
+    </div>
+    <div class="success-text">Payment Successful!</div>
+    <div class="success-amount" id="successAmount"></div>
+  </div>
+
+  <div class="qrWrap">
+    <img id="qr" class="qr">
+    <img src="gpay.gif" class="logo">
+  </div>
+
+  <div class="info">
+    <div id="upi"></div>
+    <div class="amountText" id="amountText"></div>
+    <div id="timer" class="timer"></div>
+    <div id="status" class="status">Waiting for payment...</div>
+  </div>
+
+</div>
+
+<div style="margin-top:20px;">Scan to pay with any UPI app</div>
+
+<script>
+let timerInterval;
+let pollInterval;
+let orderId = null;
+
+/* ---------------- CREATE QR ---------------- */
+
+async function generate() {
+
+  const firstName = document.getElementById("firstName").value.trim();
+  const middleName = document.getElementById("middleName").value.trim();
+  const lastName = document.getElementById("lastName").value.trim();
+  const upiId = document.getElementById("upiId").value.trim();
+  const upiName = document.getElementById("upiName").value.trim();
+
+  if (!firstName || !lastName || !amount) {
+    alert("Enter first name, last name and amount");
+    return;
+  }
+
+  const res = await fetch("/create-payment", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({ 
+      firstName, 
+      middleName, 
+      lastName, 
+      amount,
+      upiId,
+      upiName
+    })
+  });
+
+  const data = await res.json();
+
+  orderId = data.orderId;
+
+  document.getElementById("card").style.display = "block";
+  document.getElementById("successUI").style.display = "none"; // Hide success on new gen
+  document.getElementById("qr").src = data.qr;
+  document.getElementById("qr").style.opacity = "1";
+
+  document.getElementById("upi").innerText = "UPI ID: " + data.upiId;
+  
+  // Display final amount with paisa (primary identifier)
+  const finalAmt = data.finalAmount.toFixed(2);
+  document.getElementById("amountText").innerHTML = `Pay exactly: <strong>₹${finalAmt}</strong>`;
+  document.getElementById("successAmount").innerText = "₹" + finalAmt;
+  document.getElementById("status").innerText = "Waiting for payment...";
+
+  startTimer(data.createdAt || Date.now());
+  startPolling();
+}
+
+/* ---------------- TIMER ---------------- */
+
+function startTimer(startTime) {
+
+  const duration = 5 * 60 * 1000;
+  const timerEl = document.getElementById("timer");
+
+  clearInterval(timerInterval);
+
+  timerInterval = setInterval(() => {
+
+    const remaining = duration - (Date.now() - startTime);
+
+    if (remaining <= 0) {
+      clearInterval(timerInterval);
+      clearInterval(pollInterval);
+
+      timerEl.innerText = "QR Expired";
+      document.getElementById("status").innerText = "";
+      document.getElementById("qr").style.opacity = "0.2";
+      return;
+    }
+
+    const m = Math.floor(remaining / 60000);
+    const s = Math.floor((remaining % 60000) / 1000);
+
+    timerEl.innerText = `Expires in ${m}:${s.toString().padStart(2,"0")}`;
+
+  }, 1000);
+}
+
+/* ---------------- LIVE STATUS POLLING ---------------- */
+
+function startPolling() {
+
+  clearInterval(pollInterval);
+
+  pollInterval = setInterval(async () => {
+
+    try {
+      const res = await fetch(`/status/${orderId}`);
+      const data = await res.json();
+
+      if (data.status === "PAID") {
+
+        clearInterval(pollInterval);
+        clearInterval(timerInterval);
+
+        // Show Success Animation
+        document.getElementById("successUI").style.display = "flex";
+      }
+    } catch (err) {
+      console.error("Polling error", err);
+    }
+
+  }, 2000);
+}
+</script>
+
+</body>
+</html>

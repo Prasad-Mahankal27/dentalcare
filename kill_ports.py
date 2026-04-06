@@ -1,38 +1,32 @@
 import os
 import subprocess
-import sys
 
 def kill_port(port):
     try:
-        # Get PID using netstat
-        output = subprocess.check_output(f"netstat -ano | findstr :{port}", shell=True).decode()
-        pids = set()
-        for line in output.strip().split('\n'):
-            parts = line.split()
-            if len(parts) >= 5:
-                # The PID is the last element
-                # Check if it's actually listening on THIS port
-                addr = parts[1]
-                if f":{port}" in addr:
-                    pid = parts[-1]
-                    pids.add(pid)
-        
-        for pid in pids:
-            print(f"Killing PID {pid} on port {port}")
-            subprocess.run(f"taskkill /F /PID {pid}", shell=True)
+        # Get PID using lsof on macOS/Linux
+        output = subprocess.check_output(["lsof", "-t", f"-i:{port}"]).decode().strip()
+        if output:
+            pids = output.split('\n')
+            for pid in pids:
+                print(f"Killing PID {pid} on port {port}")
+                subprocess.run(["kill", "-9", pid])
     except subprocess.CalledProcessError:
+        # lsof returns exit code 1 if no process found
         print(f"No process found on port {port}.")
     except Exception as e:
         print(f"Error killing port {port}: {e}")
 
 if __name__ == "__main__":
-    # Force kill any lingering python or node processes
-    print("Killing all python and node processes...")
-    os.system("taskkill /F /IM python.exe /T 2>NUL")
-    os.system("taskkill /F /IM node.exe /T 2>NUL")
+    # Force kill lingering python and node processes by name
+    print("Cleaning up lingering processes...")
+    try:
+        subprocess.run(["pkill", "-f", "node"], stderr=subprocess.DEVNULL)
+        subprocess.run(["pkill", "-f", "python"], stderr=subprocess.DEVNULL)
+    except:
+        pass
     
-    kill_port(3000)
-    kill_port(8000)
-    kill_port(4000)
-    kill_port(5173)
+    ports = [3000, 3002, 4000, 5173, 8000]
+    for port in ports:
+        kill_port(port)
+        
     print("Ports cleared.")
