@@ -9,6 +9,7 @@ import VisitDetails from "./pages/VisitDetails";
 import PatientVisitsPage from "./pages/PatientVisitPage";
 import AppointmentsPage from "./pages/AppointmentsPage";
 import DoctorsPage from "./pages/DoctorsPage";
+import AppointmentDetailsPage from "./pages/AppointmentDetailsPage";
 
 function App() {
   const [user, setUser] = useState<any>(() => {
@@ -65,6 +66,7 @@ function App() {
         <>
           <Route path="/doctor" element={<DoctorDashboard user={user} />} />
           <Route path="/doctor/appointments" element={<AppointmentsPage user={user} />} />
+          <Route path="/doctor/appointments/:appointmentId" element={<AppointmentDetailsPage user={user} />} />
           <Route path="/doctor/doctors" element={<DoctorsPage user={user} />} />
           <Route path="/doctor/visit/:visitId/view" element={<VisitDetails />} />
           <Route path="/doctor/visit/:visitId/workflow" element={<VisitWorkflow token={user.token} />} />

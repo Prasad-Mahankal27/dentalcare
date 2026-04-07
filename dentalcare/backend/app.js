@@ -8,6 +8,7 @@ const patientRoutes = require("./routes/patient");
 const visitRoutes = require("./routes/visit");
 const billingRoutes = require("./routes/billing");
 const dashboardRoutes = require("./routes/dashboard");
+const appointmentRoutes = require("./routes/appointments");
 
 app.use(cors());
 app.use(express.json());
@@ -16,6 +17,7 @@ app.use("/patients", patientRoutes);
 app.use("/visits", visitRoutes);
 app.use("/billing", billingRoutes);
 app.use("/dashboard", dashboardRoutes);
+app.use("/appointments", appointmentRoutes);
 
 app.get("/health", (req, res) => {
     res.json({ status: "OK" });

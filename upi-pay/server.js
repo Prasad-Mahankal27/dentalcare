@@ -35,8 +35,8 @@ const UPI_ID = process.env.UPI_ID || "abhibhoo.anand@oksbi";
 const UPI_NAME = process.env.UPI_NAME || "Abhibhoo Anand";
 const PORT = process.env.PORT || 3002;
 
-// Payment matching window: 10 minutes
-const MATCH_WINDOW_MS = 10 * 60 * 1000;
+// Payment matching window: 20 minutes
+const MATCH_WINDOW_MS = 20 * 60 * 1000;
 
 /* ================================================
    HELPER FUNCTIONS
@@ -70,7 +70,6 @@ function generateRandomPaisa() {
 const db = new sqlite3.Database("./payments.db");
 let server = null;
 let emailPollTask = null;
-let isShuttingDown = false;
 
 function runDb(sql, params = []) {
   return new Promise((resolve, reject) => {
@@ -153,11 +152,19 @@ async function initializeDatabase() {
 app.post("/create-payment", async (req, res) => {
   try {
     const { firstName, middleName, lastName, amount, upiId, upiName } = req.body;
-    const fullName = [firstName, middleName, lastName].filter(Boolean).join(" ").trim();
+    const normalizedFirstName = typeof firstName === "string" ? firstName.trim() : "";
+    const normalizedMiddleName = typeof middleName === "string" ? middleName.trim() : "";
+    const normalizedLastName = typeof lastName === "string" ? lastName.trim() : "";
+    const senderUpiId = typeof upiId === "string" ? upiId.trim() : null;
+    const senderUpiName = typeof upiName === "string" ? upiName.trim() : null;
+    const fullName = [normalizedFirstName, normalizedMiddleName, normalizedLastName]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
 
     // Validation
-    if (fullName.length === 0) {
-      return res.status(400).json({ error: "Full name is required" });
+    if (!normalizedFirstName || !normalizedLastName) {
+      return res.status(400).json({ error: "First name and last name are required" });
     }
     
     const baseAmount = parseFloat(amount);
@@ -193,7 +200,20 @@ app.post("/create-payment", async (req, res) => {
     db.run(
       `INSERT INTO orders (id, firstName, middleName, lastName, fullName, upiId, upiName, normalizedName, baseAmount, finalAmount, status, createdAt) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [orderId, firstName, middleName, lastName, fullName, upiId, upiName, normalizedName, baseAmount, finalAmount, "PENDING", createdAt],
+      [
+        orderId,
+        normalizedFirstName,
+        normalizedMiddleName || null,
+        normalizedLastName,
+        fullName,
+        senderUpiId,
+        senderUpiName,
+        normalizedName,
+        baseAmount,
+        finalAmount,
+        "PENDING",
+        createdAt
+      ],
       function(err) {
         if (err) {
           console.error("❌ Insert Error:", err.message);
@@ -293,10 +313,25 @@ app.post("/manual-verify/:id", (req, res) => {
 function processPaymentEmail(emailData) {
   const { body: text, uid } = emailData;
 
-  // Extract amount with decimals (e.g., Rs.200.37 or Rs 500.01)
-  const amountMatch = text.match(/Rs\.?\s?(\d+(?:\.\d{1,2})?)/i);
-  // Extract creditor name (between /CR/ and /)
-  const nameMatch = text.match(/\/CR\/([^\/]+)\//i);
+  // Extract amount with decimals (e.g., Rs.200.37, INR 500.01, ₹120.50)
+  const amountMatch = text.match(/(?:Rs\.?|INR|₹)\s*(\d+(?:\.\d{1,2})?)/i);
+
+  // Extract payer name using common bank email patterns
+  const namePatterns = [
+    /\/CR\/([^\/]+)\//i,
+    /credited\s+by\s+([A-Za-z .]+)/i,
+    /from\s+([A-Za-z .]{3,})/i
+  ];
+
+  let emailName = "";
+  for (const pattern of namePatterns) {
+    const match = text.match(pattern);
+    if (match && match[1]) {
+      emailName = match[1].trim();
+      break;
+    }
+  }
+
   // Extract UTR (standard 12-digit number for UPI)
   const utrMatch = text.match(/\b\d{12}\b/);
 
@@ -307,7 +342,6 @@ function processPaymentEmail(emailData) {
 
   // Parse amount as float to preserve decimals
   const emailAmount = parseFloat(amountMatch[1]);
-  const emailName = nameMatch ? nameMatch[1].toUpperCase().trim() : "";
   const normalizedEmailName = normalizeName(emailName);
   const emailUtr = utrMatch ? utrMatch[0] : null;
 
@@ -317,47 +351,85 @@ function processPaymentEmail(emailData) {
   console.log(`   Name: ${emailName}`);
   console.log(`   Normalized: ${normalizedEmailName}`);
 
-  // Time window for matching (10 minutes)
+  // Time window for matching (20 minutes)
   const timeWindowStart = Date.now() - MATCH_WINDOW_MS;
 
-  // PRIMARY MATCH: Exact finalAmount (unique due to random paisa)
-  // SECONDARY CHECK: Normalized name must match
-  db.get(
-    `SELECT id, fullName, normalizedName, finalAmount, createdAt FROM orders
-     WHERE finalAmount = ? AND normalizedName = ? AND status = 'PENDING' AND createdAt > ?
-     ORDER BY createdAt DESC
-     LIMIT 1`,
-    [emailAmount, normalizedEmailName, timeWindowStart],
-    (err, row) => {
-      if (err) {
-        console.error("❌ DB Query Error:", err.message);
-        return;
-      }
-
-      if (!row) {
-        console.log(`❌ No pending order found for ₹${emailAmount.toFixed(2)} from ${normalizedEmailName}`);
-        return;
-      }
-
-      // Update order to PAID
-      db.run(
-        `UPDATE orders SET status = 'PAID', utr = ?, matchedEmailUid = ? WHERE id = ?`,
-        [emailUtr, uid, row.id],
-        function(updateErr) {
-          if (updateErr) {
-            console.error("❌ Update Error:", updateErr.message);
-            return;
-          }
-
-          console.log(`\n✅ PAYMENT VERIFIED!`);
-          console.log(`   Order ID: ${row.id}`);
-          console.log(`   Full Name: ${row.fullName}`);
-          console.log(`   Amount: ₹${row.finalAmount.toFixed(2)}`);
-          console.log(`🎉 Payment Successfully Processed!\n`);
+  const markOrderPaid = (row) => {
+    db.run(
+      `UPDATE orders SET status = 'PAID', utr = ?, matchedEmailUid = ? WHERE id = ?`,
+      [emailUtr, uid, row.id],
+      function(updateErr) {
+        if (updateErr) {
+          console.error("❌ Update Error:", updateErr.message);
+          return;
         }
-      );
-    }
-  );
+
+        console.log(`\n✅ PAYMENT VERIFIED!`);
+        console.log(`   Order ID: ${row.id}`);
+        console.log(`   Full Name: ${row.fullName}`);
+        console.log(`   Amount: ₹${Number(row.finalAmount).toFixed(2)}`);
+        console.log(`🎉 Payment Successfully Processed!\n`);
+      }
+    );
+  };
+
+  const matchByAmountOnlyIfUnique = () => {
+    db.all(
+      `SELECT id, fullName, normalizedName, finalAmount, createdAt FROM orders
+       WHERE ABS(finalAmount - ?) < 0.001 AND status = 'PENDING' AND createdAt > ?
+       ORDER BY createdAt DESC
+       LIMIT 2`,
+      [emailAmount, timeWindowStart],
+      (amountOnlyErr, rows) => {
+        if (amountOnlyErr) {
+          console.error("❌ DB Amount-only Query Error:", amountOnlyErr.message);
+          return;
+        }
+
+        if (!rows || rows.length === 0) {
+          console.log(`❌ No pending order found for ₹${emailAmount.toFixed(2)} (amount-only)`);
+          return;
+        }
+
+        if (rows.length > 1) {
+          console.log(`⚠️ Multiple pending orders found for ₹${emailAmount.toFixed(2)}. Skipping auto-match.`);
+          return;
+        }
+
+        console.log(`ℹ️ Matched by unique exact amount (name unavailable/mismatch).`);
+        markOrderPaid(rows[0]);
+      }
+    );
+  };
+
+  // PRIMARY MATCH: Exact amount + normalized name
+  if (normalizedEmailName) {
+    db.get(
+      `SELECT id, fullName, normalizedName, finalAmount, createdAt FROM orders
+       WHERE ABS(finalAmount - ?) < 0.001 AND normalizedName = ? AND status = 'PENDING' AND createdAt > ?
+       ORDER BY createdAt DESC
+       LIMIT 1`,
+      [emailAmount, normalizedEmailName, timeWindowStart],
+      (err, row) => {
+        if (err) {
+          console.error("❌ DB Query Error:", err.message);
+          return;
+        }
+
+        if (row) {
+          markOrderPaid(row);
+          return;
+        }
+
+        console.log(`ℹ️ Name+amount match not found, trying amount-only fallback for ₹${emailAmount.toFixed(2)}.`);
+        matchByAmountOnlyIfUnique();
+      }
+    );
+    return;
+  }
+
+  // Fallback when name was not parsable in email body.
+  matchByAmountOnlyIfUnique();
 }
 
 /* ================================================
@@ -415,27 +487,16 @@ startServer();
    GRACEFUL SHUTDOWN
    ================================================ */
 
-function gracefulShutdown(signalName) {
-  if (isShuttingDown) {
-    return;
-  }
-
-  isShuttingDown = true;
-  console.log(`\n🛑 Shutting down gracefully (${signalName})...`);
+process.on("SIGINT", () => {
+  console.log("\n🛑 Shutting down gracefully...");
 
   if (emailPollTask) {
     emailPollTask.stop();
-    emailPollTask = null;
   }
 
   const closeDatabase = () => {
     db.close((err) => {
-      if (err) {
-        console.error("DB close error:", err.message);
-        process.exit(1);
-        return;
-      }
-
+      if (err) console.error("DB close error:", err.message);
       console.log("👋 Server stopped");
       process.exit(0);
     });
@@ -446,13 +507,7 @@ function gracefulShutdown(signalName) {
     return;
   }
 
-  server.close((err) => {
-    if (err) {
-      console.error("HTTP server close error:", err.message);
-    }
+  server.close(() => {
     closeDatabase();
   });
-}
-
-process.once("SIGINT", () => gracefulShutdown("SIGINT"));
-process.once("SIGTERM", () => gracefulShutdown("SIGTERM"));
+});

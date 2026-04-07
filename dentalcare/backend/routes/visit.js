@@ -1,10 +1,79 @@
 const express = require("express");
 const { PrismaClient } = require("@prisma/client");
 const { authMiddleware } = require("../auth");
+const generateAppointmentId = require("../utils/appointmentId");
 const generateVisitId = require("../utils/visitId");
 
 const prisma = new PrismaClient();
 const router = express.Router();
+
+function normalizePhone(rawPhone) {
+  return String(rawPhone || "").replace(/\D/g, "");
+}
+
+function normalizeGender(rawGender) {
+  const normalized = String(rawGender || "").trim().toLowerCase();
+  if (normalized === "male" || normalized === "m") {
+    return "Male";
+  }
+  if (normalized === "female" || normalized === "f") {
+    return "Female";
+  }
+  if (normalized === "other" || normalized === "o") {
+    return "Other";
+  }
+  return null;
+}
+
+function parsePatientAge(rawAge) {
+  const age = Number(rawAge);
+  if (!Number.isInteger(age) || age < 1 || age > 120) {
+    return null;
+  }
+  return age;
+}
+
+function buildPatientUpdatePayload(appointmentLike) {
+  const name = String(appointmentLike?.patientName || "").trim();
+  const phone = normalizePhone(appointmentLike?.patientPhone);
+  const age = parsePatientAge(appointmentLike?.patientAge);
+  const gender = normalizeGender(appointmentLike?.patientGender);
+  const address = String(appointmentLike?.patientAddress || "").trim();
+
+  const payload = {};
+  if (name) {
+    payload.name = name;
+  }
+  if (phone) {
+    payload.phone = phone;
+  }
+  if (age) {
+    payload.age = age;
+  }
+  if (gender) {
+    payload.gender = gender;
+  }
+  if (address) {
+    payload.address = address;
+  }
+
+  return payload;
+}
+
+async function syncPatientFromAppointment(tx, visitPatientId, appointmentLike) {
+  const updatePayload = buildPatientUpdatePayload(appointmentLike);
+  if (!Object.keys(updatePayload).length || !visitPatientId) {
+    return visitPatientId;
+  }
+
+  const updated = await tx.patient.update({
+    where: { id: visitPatientId },
+    data: updatePayload,
+    select: { id: true }
+  });
+
+  return updated.id;
+}
 
 router.post(
   "/create",
@@ -130,45 +199,170 @@ router.post(
   "/close/:visitId",
   authMiddleware(["DOCTOR"]),
   async (req, res) => {
-    const { visitId } = req.params;
-    const { isCompleted, patientEmail, sendEmail } = req.body;
+    try {
+      const { visitId } = req.params;
+      const { isCompleted, patientEmail, sendEmail } = req.body;
+      const completed =
+        isCompleted === true ||
+        isCompleted === "true" ||
+        isCompleted === 1 ||
+        isCompleted === "1";
 
-    const visit = await prisma.visit.findUnique({
-      where: { visitId },
-      include: {
-        bill: true,
-        patient: true,
-        doctor: true
-      }
-    });
-
-    if (!visit) {
-      return res.status(404).json({ message: "Visit not found" });
-    }
-
-    if (!visit.bill) {
-      return res.status(400).json({
-        message: "Billing not completed for this visit"
+      const visit = await prisma.visit.findUnique({
+        where: { visitId },
+        include: {
+          bill: true,
+          patient: true,
+          doctor: true
+        }
       });
-    }
 
-    // Update visit status
-    const updatedVisit = await prisma.visit.update({
-      where: { visitId },
-      data: {
-        clinicalStatus: isCompleted ? "CLINICALLY_COMPLETED" : "IN_PROGRESS",
-        paymentStatus: visit.bill.pendingAmount > 0 ? "PARTIALLY_PAID" : "PAID",
-        caseOutcome: isCompleted ? "COMPLETED" : "ONGOING"
+      if (!visit) {
+        return res.status(404).json({ message: "Visit not found" });
       }
-    });
 
-    // Handle Email & PDF
-    if (sendEmail && patientEmail) {
-      try {
-        const medicines = JSON.parse(visit.medicines || "[]");
-        const symptoms = visit.symptoms || "None";
+      if (!visit.bill) {
+        return res.status(400).json({
+          message: "Billing not completed for this visit"
+        });
+      }
 
-        const htmlContent = `
+      let completedAppointmentId = null;
+      await prisma.$transaction(async (tx) => {
+        await tx.visit.update({
+          where: { visitId },
+          data: {
+            clinicalStatus: completed ? "CLINICALLY_COMPLETED" : "IN_PROGRESS",
+            paymentStatus: visit.bill.pendingAmount > 0 ? "PARTIALLY_PAID" : "PAID",
+            caseOutcome: completed ? "COMPLETED" : "ONGOING"
+          }
+        });
+
+        if (!completed) {
+          return;
+        }
+
+        const appointmentSelect = {
+          appointmentId: true,
+          status: true,
+          patientId: true,
+          patientName: true,
+          patientPhone: true,
+          patientAge: true,
+          patientGender: true,
+          patientAddress: true,
+          scheduledAt: true,
+          reason: true
+        };
+
+        const linkedAppointment = await tx.appointment.findUnique({
+          where: {
+            linkedVisitId: visitId
+          },
+          select: appointmentSelect
+        });
+
+        const visitPatientPhone = normalizePhone(visit.patient?.phone);
+
+        let appointmentToComplete = linkedAppointment;
+
+        const visitDayStart = new Date(visit.createdAt);
+        visitDayStart.setHours(0, 0, 0, 0);
+        const visitDayEnd = new Date(visitDayStart);
+        visitDayEnd.setDate(visitDayEnd.getDate() + 1);
+
+        if (!appointmentToComplete) {
+          // Legacy fallback: auto-link only when exactly one same-day candidate exists.
+          const fallbackCandidates = await tx.appointment.findMany({
+            where: {
+              linkedVisitId: null,
+              doctorId: visit.doctorId,
+              scheduledAt: {
+                gte: visitDayStart,
+                lt: visitDayEnd
+              },
+              status: {
+                in: ["REQUESTED", "CONFIRMED"]
+              },
+              OR: [
+                { patientId: visit.patientId },
+                ...(visitPatientPhone ? [{ patientPhone: visitPatientPhone }] : [])
+              ]
+            },
+            orderBy: {
+              scheduledAt: "asc"
+            },
+            select: appointmentSelect,
+            take: 2
+          });
+
+          if (fallbackCandidates.length === 1) {
+            appointmentToComplete = fallbackCandidates[0];
+          }
+        }
+
+        if (appointmentToComplete) {
+          const syncedPatientId = await syncPatientFromAppointment(
+            tx,
+            visit.patientId,
+            appointmentToComplete
+          );
+
+          await tx.appointment.update({
+            where: {
+              appointmentId: appointmentToComplete.appointmentId
+            },
+            data: {
+              status: "COMPLETED",
+              linkedVisitId: visitId,
+              patientId: syncedPatientId,
+              doctorId: visit.doctorId
+            }
+          });
+
+          completedAppointmentId = appointmentToComplete.appointmentId;
+          return;
+        }
+
+        // If no appointment can be linked confidently, record a completed WALK_IN appointment
+        // so completed dashboards still reflect the finished visit.
+        const walkInReason =
+          [visit.symptoms, visit.diagnosis, visit.treatmentPlan]
+            .map((value) => String(value || "").trim())
+            .find(Boolean) ||
+          "Completed visit";
+
+        const createdCompletedAppointment = await tx.appointment.create({
+          data: {
+            appointmentId: generateAppointmentId(),
+            patientId: visit.patientId,
+            doctorId: visit.doctorId,
+            patientPhone: visitPatientPhone || String(visit.patient?.phone || "").trim() || "UNKNOWN",
+            patientName: String(visit.patient?.name || "").trim() || "Unknown",
+            patientAge: visit.patient?.age ?? null,
+            patientGender: visit.patient?.gender ?? null,
+            patientAddress: visit.patient?.address ?? null,
+            scheduledAt: visit.createdAt,
+            status: "COMPLETED",
+            source: "WALK_IN",
+            linkedVisitId: visitId,
+            reason: walkInReason
+          },
+          select: {
+            appointmentId: true
+          }
+        });
+
+        completedAppointmentId = createdCompletedAppointment.appointmentId;
+      });
+
+      // Handle Email & PDF
+      if (sendEmail && patientEmail) {
+        try {
+          const medicines = JSON.parse(visit.medicines || "[]");
+          const symptoms = visit.symptoms || "None";
+
+          const htmlContent = `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
             <div style="background-color: #059669; color: white; padding: 20px; text-align: center;">
               <h1 style="margin: 0;">Dental Care Report</h1>
@@ -191,16 +385,16 @@ router.post(
               <ul style="list-style: none; padding: 0;">
                 <li><strong>Visit ID:</strong> ${visit.visitId}</li>
                 <li><strong>Doctor:</strong> ${visit.doctor?.name || "Dr. Prasad"}</li>
-                <li><strong>Status:</strong> ${isCompleted ? "Completed" : "Ongoing (Follow-up Required)"}</li>
+                <li><strong>Status:</strong> ${completed ? "Completed" : "Ongoing (Follow-up Required)"}</li>
               </ul>
               <p style="font-size: 12px; color: #666; margin-top: 30px;">Health is wealth. Keep smiling!<br>DentalCare Team</p>
             </div>
           </div>
         `;
 
-        const pdfOptions = { format: 'A4' };
-        const pdfFile = {
-          content: `
+          const pdfOptions = { format: 'A4' };
+          const pdfFile = {
+            content: `
           <html>
             <head>
               <style>
@@ -309,43 +503,50 @@ router.post(
           </html>
         ` };
 
-        const pdfBuffer = await html_pdf.generatePdf(pdfFile, pdfOptions);
+          const pdfBuffer = await html_pdf.generatePdf(pdfFile, pdfOptions);
 
-        // Configure Mailer (Using environment variables if available)
-        const transporter = nodemailer.createTransport({
-          host: process.env.SMTP_HOST,
-          port: Number(process.env.SMTP_PORT),
-          secure: process.env.SMTP_SECURE === 'true', // Converts the string "true" to a boolean true
-          auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS,
-          },
-        });
+          // Configure Mailer (Using environment variables if available)
+          const transporter = nodemailer.createTransport({
+            host: process.env.SMTP_HOST,
+            port: Number(process.env.SMTP_PORT),
+            secure: process.env.SMTP_SECURE === 'true', // Converts the string "true" to a boolean true
+            auth: {
+              user: process.env.SMTP_USER,
+              pass: process.env.SMTP_PASS,
+            },
+          });
 
-        await transporter.sendMail({
-          from: '"DentalCare AI" <reports@dentalcare.com>',
-          to: patientEmail,
-          subject: `Your Dental Visit Report - ${visit.visitId}`,
-          html: htmlContent,
-          attachments: [
-            {
-              filename: `Report_${visit.visitId}.pdf`,
-              content: pdfBuffer
-            }
-          ]
-        });
+          await transporter.sendMail({
+            from: '"DentalCare AI" <reports@dentalcare.com>',
+            to: patientEmail,
+            subject: `Your Dental Visit Report - ${visit.visitId}`,
+            html: htmlContent,
+            attachments: [
+              {
+                filename: `Report_${visit.visitId}.pdf`,
+                content: pdfBuffer
+              }
+            ]
+          });
 
-        console.log(`Email sent to ${patientEmail}`);
-      } catch (err) {
-        console.error("Failed to send email/PDF:", err);
-        // We don't fail the whole request since the visit is already closed in DB
+          console.log(`Email sent to ${patientEmail}`);
+        } catch (err) {
+          console.error("Failed to send email/PDF:", err);
+          // We don't fail the whole request since the visit is already closed in DB
+        }
       }
-    }
 
-    res.json({
-      status: isCompleted ? "COMPLETED" : "ONGOING",
-      message: "Visit closed successfully"
-    });
+      return res.json({
+        status: completed ? "COMPLETED" : "ONGOING",
+        message: "Visit closed successfully",
+        appointmentId: completedAppointmentId
+      });
+    } catch (err) {
+      console.error("Visit close error:", err);
+      return res.status(500).json({
+        message: "Failed to close visit"
+      });
+    }
   }
 );
 

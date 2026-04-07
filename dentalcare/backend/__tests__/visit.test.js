@@ -134,6 +134,92 @@ describe("GET /visits/history/:patientId", () => {
     });
 });
 
+describe("POST /visits/close/:visitId", () => {
+    it("should mark linked appointment as COMPLETED when visit is completed", async () => {
+        const uniqueSuffix = `${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+        const visitId = `VIS-TEST-CLOSE-${uniqueSuffix}`;
+        const appointmentId = `APT-TEST-CLOSE-${uniqueSuffix}`;
+
+        let createdVisit;
+
+        try {
+            createdVisit = await prisma.visit.create({
+                data: {
+                    visitId,
+                    patientId: testData.patient.id,
+                    doctorId: testData.doctor.id,
+                    visitType: "NEW"
+                }
+            });
+
+            await prisma.billing.create({
+                data: {
+                    billId: `BILL_TEST_CLOSE_${uniqueSuffix}`,
+                    visitId: createdVisit.id,
+                    previousPending: 0,
+                    pendingCleared: 0,
+                    updatedPending: 0,
+                    currentCharges: 1200,
+                    discount: 0,
+                    totalAmount: 1200,
+                    paidAmount: 1200,
+                    pendingAmount: 0
+                }
+            });
+
+            await prisma.appointment.create({
+                data: {
+                    appointmentId,
+                    patientId: testData.patient.id,
+                    doctorId: testData.doctor.id,
+                    patientPhone: testData.patient.phone,
+                    patientName: testData.patient.name,
+                    patientAge: testData.patient.age,
+                    patientGender: testData.patient.gender,
+                    patientAddress: testData.patient.address,
+                    scheduledAt: new Date(Date.now() + 60 * 60 * 1000),
+                    status: "CONFIRMED",
+                    source: "FRONT_DESK",
+                    linkedVisitId: visitId,
+                    reason: "Visit close status sync test"
+                }
+            });
+
+            const res = await request(app)
+                .post(`/visits/close/${visitId}`)
+                .set("Authorization", `Bearer ${doctorToken}`)
+                .send({
+                    isCompleted: true,
+                    sendEmail: false
+                });
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.status).toBe("COMPLETED");
+
+            const updatedAppointment = await prisma.appointment.findUnique({
+                where: { appointmentId },
+                select: { status: true }
+            });
+
+            expect(updatedAppointment?.status).toBe("COMPLETED");
+        } finally {
+            await prisma.appointment.deleteMany({
+                where: { appointmentId }
+            });
+
+            if (createdVisit) {
+                await prisma.billing.deleteMany({
+                    where: { visitId: createdVisit.id }
+                });
+            }
+
+            await prisma.visit.deleteMany({
+                where: { visitId }
+            });
+        }
+    });
+});
+
 describe("DELETE /visits/:visitId", () => {
     let deleteVisitId;
 

@@ -16,6 +16,7 @@ model User {
   createdAt DateTime @default(now())
 
   visits    Visit[]
+  appointments Appointment[]
 }
 
 model Patient {
@@ -29,6 +30,7 @@ model Patient {
   createdAt   DateTime @default(now())
 
   visits      Visit[]
+  appointments Appointment[]
 }
 
 enum Role {
@@ -44,6 +46,21 @@ enum VisitType {
 enum CaseOutcome {
   ONGOING
   COMPLETED
+}
+
+enum AppointmentStatus {
+  REQUESTED
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+enum AppointmentSource {
+  WHATSAPP
+  FRONT_DESK
+  PHONE
+  WALK_IN
 }
 
 model Visit {
@@ -74,6 +91,40 @@ model Visit {
   patient         Patient          @relation(fields: [patientId], references: [id])
   doctor          User             @relation(fields: [doctorId], references: [id])
   bill            Billing?
+  appointment     Appointment?
+}
+
+model Appointment {
+  id                Int               @id @default(autoincrement())
+  appointmentId     String            @unique
+
+  patientId         Int?
+  doctorId          Int?
+
+  patientPhone      String
+  patientName       String?
+  patientAge        Int?
+  patientGender     String?
+  patientAddress    String?
+  scheduledAt       DateTime
+  status            AppointmentStatus @default(REQUESTED)
+  source            AppointmentSource @default(FRONT_DESK)
+  linkedVisitId     String?           @unique
+
+  reason            String?
+  whatsappMessageId String?
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  patient           Patient?          @relation(fields: [patientId], references: [id])
+  doctor            User?             @relation(fields: [doctorId], references: [id])
+  visit             Visit?            @relation(fields: [linkedVisitId], references: [visitId])
+
+  @@index([scheduledAt])
+  @@index([status])
+  @@index([doctorId, scheduledAt])
+  @@index([patientPhone, createdAt])
 }
 
 enum VisitStatus {

@@ -1,4 +1,19 @@
 {
+  "name": "dentalcare-workspace",
+  "private": true,
+  "scripts": {
+    "setup": "npm --prefix dentalcare install --no-audit --no-fund && npm --prefix dentalcare/backend install --no-audit --no-fund && npm --prefix ai-backend install --no-audit --no-fund && npm --prefix upi-pay install --no-audit --no-fund && ./dental/bin/pip install -r ai-service/requirements.txt",
+    "clean": "./dental/bin/python kill_ports.py",
+    "start": "npm run clean && npx concurrently --kill-others-on-fail --names FRONTEND,BACKEND,AI-SERVICE,AI-BACKEND,WHATSAPP,NGROK,UPI-PAY --prefix-colors blue,green,yellow,magenta,cyan,red,white \"npm --prefix dentalcare run dev\" \"npm --prefix dentalcare/backend run start\" \"npm run start:ai-py\" \"npm --prefix ai-backend run start\" \"npm run start:whatsapp\" \"npm run start:ngrok\" \"npm --prefix upi-pay run start\"",
+    "start:full": "npm run start",
+    "start:frontend": "npm --prefix dentalcare run dev",
+    "start:backend": "npm --prefix dentalcare/backend run start",
+    "start:ai-node": "npm --prefix ai-backend run start",
+    "start:ai-py": "cd ai-service && ../dental/bin/python -m uvicorn main:app --host 0.0.0.0 --port 8000",
+    "start:whatsapp": "./dental/bin/python whatsapp/whatsapp.py",
+    "start:ngrok": "node scripts/start-ngrok.js",
+    "start:upi": "npm --prefix upi-pay run start"
+  },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
@@ -39,6 +54,7 @@
     "vaul": "^1.1.2"
   },
   "devDependencies": {
+    "concurrently": "^9.2.1",
     "jest": "^30.2.0",
     "supertest": "^7.2.2"
   }
