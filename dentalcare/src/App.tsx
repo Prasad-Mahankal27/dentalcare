@@ -10,6 +10,7 @@ import PatientVisitsPage from "./pages/PatientVisitPage";
 import AppointmentsPage from "./pages/AppointmentsPage";
 import DoctorsPage from "./pages/DoctorsPage";
 import AppointmentDetailsPage from "./pages/AppointmentDetailsPage";
+import SettingsPage from "./pages/SettingsPage";
 
 function App() {
   const [user, setUser] = useState<any>(() => {
@@ -68,6 +69,7 @@ function App() {
           <Route path="/doctor/appointments" element={<AppointmentsPage user={user} />} />
           <Route path="/doctor/appointments/:appointmentId" element={<AppointmentDetailsPage user={user} />} />
           <Route path="/doctor/doctors" element={<DoctorsPage user={user} />} />
+          <Route path="/doctor/settings" element={<SettingsPage user={user} onLogout={handleLogout} />} />
           <Route path="/doctor/visit/:visitId/view" element={<VisitDetails />} />
           <Route path="/doctor/visit/:visitId/workflow" element={<VisitWorkflow token={user.token} />} />
         </>
@@ -75,7 +77,10 @@ function App() {
 
       {/* Reception Routes */}
       {isReception && (
-        <Route path="/reception" element={<ReceptionDashboard user={user} />} />
+        <>
+          <Route path="/reception" element={<ReceptionDashboard user={user} />} />
+          <Route path="/reception/settings" element={<SettingsPage user={user} onLogout={handleLogout} />} />
+        </>
       )}
 
       {/* Catch-all: Redirects to appropriate dashboard based on role to prevent blank screens */}

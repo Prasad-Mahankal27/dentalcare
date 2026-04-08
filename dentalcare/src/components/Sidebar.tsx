@@ -23,6 +23,7 @@ export function Sidebar({
   onClose
 }: SidebarProps) {
   const navigate = useNavigate();
+  const settingsActive = activeItem === "Settings";
 
   const menuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/doctor", hasAdd: false },
@@ -48,10 +49,20 @@ export function Sidebar({
           lg:translate-x-0 flex flex-col
         `}
       >
-        <div className="flex items-center justify-between px-4 py-4">
-          <h1 className="text-lg font-bold text-emerald-600">
-            Smiles Dental Clinic
-          </h1>
+        <div className="flex items-start justify-between gap-2 px-4 py-4">
+          <div className="flex items-start gap-2">
+            <img
+              src="/Orisyn_logo.png"
+              alt="Orisyn logo"
+              className="h-15 w-15 rounded-md object-cover"
+            />
+            <div>
+              <h1 className="text-lg font-bold text-emerald-600">Orisyn</h1>
+              <p className="text-[10px] font-medium leading-tight text-emerald-800/80">
+                The AI Operating System for Dental Clinics
+              </p>
+            </div>
+          </div>
 
           <button
             onClick={onClose}
@@ -95,7 +106,17 @@ export function Sidebar({
         </nav>
 
         <div className="px-3 py-4 space-y-1 border-t border-gray-100">
-          <div className="flex items-center gap-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg font-medium cursor-pointer">
+          <div
+            onClick={() => {
+              navigate("/doctor/settings");
+              onClose?.();
+            }}
+            className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium cursor-pointer ${
+              settingsActive
+                ? "bg-emerald-50 text-emerald-700"
+                : "text-gray-600 hover:bg-gray-50"
+            }`}
+          >
             <Settings className="w-4 h-4 text-gray-500" />
             <span className="text-sm">Settings</span>
           </div>

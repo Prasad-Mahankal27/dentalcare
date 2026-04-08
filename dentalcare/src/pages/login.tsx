@@ -35,7 +35,16 @@ async function handleLogin() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
         
         <div className="absolute top-10 left-10">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-2">
+            <img
+              src="/Orisyn_logo.png"
+              alt="Orisyn logo"
+              className="h-12 w-12 rounded-lg object-cover"
+            />
+            <h1 className="text-3xl font-extrabold text-white drop-shadow-md">Orisyn</h1>
+            <p className="max-w-xs text-xs font-medium text-white/90 drop-shadow-md">
+              The AI Operating System for Dental Clinics
+            </p>
           </div>
         </div>
 
@@ -50,14 +59,16 @@ async function handleLogin() {
       <div className="w-1/2 flex items-center justify-center bg-white">
         <div className="w-full max-w-md px-12">
           <div className="flex justify-center mb-8">
-            <div className="bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl px-4 py-2 shadow-lg">
-              <span className="text-white font-bold text-3xl">+</span>
-            </div>
+            <img
+              src="/Orisyn_logo.png"
+              alt="Orisyn logo"
+              className="h-14 w-14 rounded-xl object-cover shadow-lg"
+            />
           </div>
 
           <div className="text-center mb-10">
             <h2 className="text-3xl font-bold text-gray-800">Login</h2>
-            <p className="text-gray-500 text-sm mt-2">Welcome back! Please login to your account</p>
+            <p className="text-gray-500 text-sm mt-2">The AI Operating System for Dental Clinics</p>
           </div>
 
           {/* Form */}

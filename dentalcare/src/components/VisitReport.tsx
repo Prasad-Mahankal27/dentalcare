@@ -30,7 +30,7 @@ const VisitReport: React.FC<VisitReportProps> = ({ visit, patient }) => {
       {/* Header */}
       <div className="bg-emerald-600 text-white p-6 flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold">Dental Care Report</h1>
+          <h1 className="text-2xl font-bold">Orisyn Clinical Report</h1>
           <p className="opacity-90">Visit Summary & Prescription</p>
         </div>
         <div className="text-right text-xs">
@@ -176,7 +176,7 @@ const VisitReport: React.FC<VisitReportProps> = ({ visit, patient }) => {
       <div className="bg-gray-100 p-4 text-center text-[10px] text-gray-500 border-t">
         <p className="font-semibold mb-1 italic text-emerald-700">Health is wealth. Keep smiling!</p>
         <p>This is a computer-generated report. No signature required.</p>
-        <p className="mt-1 opacity-60">DentalCare Management System © 2026</p>
+        <p className="mt-1 opacity-60">Orisyn • The AI Operating System for Dental Clinics © 2026</p>
       </div>
     </div>
   );

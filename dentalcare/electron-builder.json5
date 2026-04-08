@@ -1,19 +1,69 @@
 // @see - https://www.electron.build/configuration/configuration
 {
   "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
-  "appId": "YourAppID",
+  "appId": "com.parallax.orisyn",
   "asar": true,
-  "productName": "YourAppName",
+  "productName": "Orisyn",
   "directories": {
     "output": "release/${version}"
   },
+  "publish": [
+    {
+      "provider": "github",
+      "owner": "${env.ORISYN_GH_OWNER}",
+      "repo": "${env.ORISYN_GH_REPO}",
+      "releaseType": "release"
+    }
+  ],
   "files": [
     "dist",
-    "dist-electron"
+    "dist-electron",
+    "package.json"
+  ],
+  "extraResources": [
+    {
+      "from": "backend",
+      "to": "services/backend",
+      "filter": [
+        "**/*",
+        "!**/__tests__/**",
+        "!**/*.test.js",
+        "!**/coverage/**",
+        "!**/*.log"
+      ]
+    },
+    {
+      "from": "../ai-backend",
+      "to": "services/ai-backend",
+      "filter": [
+        "**/*",
+        "!**/*.test.js",
+        "!**/coverage/**",
+        "!**/*.log"
+      ]
+    },
+    {
+      "from": "../upi-pay",
+      "to": "services/upi-pay",
+      "filter": [
+        "**/*",
+        "!**/*.test.js",
+        "!**/coverage/**",
+        "!**/*.log"
+      ]
+    },
+    {
+      "from": "../ai-service/dist/ai-service",
+      "to": "services/ai-service",
+      "filter": [
+        "**/*"
+      ]
+    }
   ],
   "mac": {
     "target": [
-      "dmg"
+      "dmg",
+      "zip"
     ],
     "artifactName": "${productName}-Mac-${version}-Installer.${ext}"
   },

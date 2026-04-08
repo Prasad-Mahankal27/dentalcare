@@ -3,7 +3,13 @@ const router = express.Router();
 const { PrismaClient } = require("@prisma/client");
 const { authMiddleware } = require("./auth");
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+    datasources: {
+        db: {
+            url: process.env.DATABASE_URL || "file:./dev.db"
+        }
+    }
+});
 
 router.get("/stats", authMiddleware(["DOCTOR", "RECEPTIONIST"]), async (req, res) => {
     try {

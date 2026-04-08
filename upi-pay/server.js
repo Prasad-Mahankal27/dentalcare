@@ -7,11 +7,13 @@ const QRCode = require("qrcode");
 const sqlite3 = require("sqlite3").verbose();
 const cron = require("node-cron");
 const { v4: uuidv4 } = require("uuid");
+const path = require("path");
 
 const checkEmails = require("./emailWatcher");
 
 const app = express();
 app.use(express.json());
+const SERVICE_ROOT = __dirname;
 
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
@@ -25,7 +27,7 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.static("public"));
+app.use(express.static(path.join(SERVICE_ROOT, "public")));
 
 /* ================================================
    CONFIGURATION
@@ -34,6 +36,7 @@ app.use(express.static("public"));
 const UPI_ID = process.env.UPI_ID || "abhibhoo.anand@oksbi";
 const UPI_NAME = process.env.UPI_NAME || "Abhibhoo Anand";
 const PORT = process.env.PORT || 3002;
+const PAYMENTS_DB_PATH = process.env.PAYMENTS_DB_PATH || path.join(SERVICE_ROOT, "payments.db");
 
 // Payment matching window: 20 minutes
 const MATCH_WINDOW_MS = 20 * 60 * 1000;
@@ -67,7 +70,7 @@ function generateRandomPaisa() {
    DATABASE SETUP
    ================================================ */
 
-const db = new sqlite3.Database("./payments.db");
+const db = new sqlite3.Database(PAYMENTS_DB_PATH);
 let server = null;
 let emailPollTask = null;
 

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   CalendarClock,
-  CalendarDays,
   Check,
   ClipboardPlus,
   Loader2,
@@ -11,10 +10,12 @@ import {
   Plus,
   RefreshCw,
   Save,
+  Settings,
   Trash2,
   User,
   X
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 type GenderOption = "" | "Male" | "Female" | "Other";
 type AppointmentStatus = "pending" | "confirmed" | "completed" | "cancelled";
@@ -206,6 +207,7 @@ function formatChipDate(dateKey: string): string {
 
 export default function ReceptionDashboard({ user }: ReceptionDashboardProps) {
   const token = user.token;
+  const navigate = useNavigate();
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -604,7 +606,11 @@ export default function ReceptionDashboard({ user }: ReceptionDashboardProps) {
         <aside className="w-full rounded-2xl border border-slate-200 bg-white shadow-sm md:w-80 md:shrink-0">
           <div className="border-b border-slate-200 px-5 py-4">
             <h1 className="flex items-center gap-2 text-lg font-bold text-slate-900">
-              <CalendarDays className="h-5 w-5 text-blue-600" />
+              <img
+                src="/Orisyn_logo.png"
+                alt="Orisyn logo"
+                className="h-7 w-7 rounded-md object-cover"
+              />
               Reception Appointments
             </h1>
             <p className="mt-1 text-xs text-slate-500">Front desk planner for bookings and check-ins.</p>
@@ -678,13 +684,24 @@ export default function ReceptionDashboard({ user }: ReceptionDashboardProps) {
               <p className="text-xs text-slate-500">Logged in as</p>
               <p className="text-sm font-semibold text-slate-800">{user.role}</p>
             </div>
-            <button
-              onClick={handleLogout}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-              Logout
-            </button>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigate("/reception/settings")}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+              >
+                <Settings className="h-3.5 w-3.5" />
+                Settings
+              </button>
+
+              <button
+                onClick={handleLogout}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                Logout
+              </button>
+            </div>
           </div>
         </aside>
 

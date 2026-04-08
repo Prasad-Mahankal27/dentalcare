@@ -1,5 +1,9 @@
 {
   "name": "dentalcare-workspace",
+  "productName": "Orisyn",
+  "description": "The AI Operating System for Dental Clinics",
+  "version": "1.0.0",
+
   "private": true,
   "scripts": {
     "setup": "npm --prefix dentalcare install --no-audit --no-fund && npm --prefix dentalcare/backend install --no-audit --no-fund && npm --prefix ai-backend install --no-audit --no-fund && npm --prefix upi-pay install --no-audit --no-fund && ./dental/bin/pip install -r ai-service/requirements.txt",
@@ -14,6 +18,14 @@
     "start:ngrok": "node scripts/start-ngrok.js",
     "start:upi": "npm --prefix upi-pay run start"
   },
+  "repository":"https://github.com/parallaxstudioco/Orisyn.git",
+  "publish": {
+    "provider": "github",
+    "owner": "parallaxstudioco",
+    "repo": "Orisyn",
+    "releaseType": "release"
+  },
+
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",

@@ -3,7 +3,13 @@ const { PrismaClient } = require("@prisma/client");
 const { authMiddleware } = require("../auth");
 const generateBillId = require("../utils/billId");
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL || "file:./dev.db"
+    }
+  }
+});
 const router = express.Router();
 
 router.post(

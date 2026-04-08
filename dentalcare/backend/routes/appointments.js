@@ -5,7 +5,13 @@ const generateAppointmentId = require("../utils/appointmentId");
 const generatePatientId = require("../utils/patientId");
 const generateVisitId = require("../utils/visitId");
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL || "file:./dev.db"
+    }
+  }
+});
 const router = express.Router();
 
 const ACTIVE_APPOINTMENT_STATUSES = ["REQUESTED", "CONFIRMED"];

@@ -4,7 +4,13 @@ const { authMiddleware } = require("../auth");
 const generateAppointmentId = require("../utils/appointmentId");
 const generateVisitId = require("../utils/visitId");
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL || "file:./dev.db"
+    }
+  }
+});
 const router = express.Router();
 
 function normalizePhone(rawPhone) {
@@ -365,8 +371,8 @@ router.post(
           const htmlContent = `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
             <div style="background-color: #059669; color: white; padding: 20px; text-align: center;">
-              <h1 style="margin: 0;">Dental Care Report</h1>
-              <p style="margin: 5px 0 0; opacity: 0.9;">Visit Summary & Prescription</p>
+              <h1 style="margin: 0;">Orisyn Clinical Report</h1>
+              <p style="margin: 5px 0 0; opacity: 0.9;">The AI Operating System for Dental Clinics</p>
             </div>
             <div style="padding: 20px;">
               <p>Dear <strong>${visit.patient.name}</strong>,</p>
@@ -387,7 +393,7 @@ router.post(
                 <li><strong>Doctor:</strong> ${visit.doctor?.name || "Dr. Prasad"}</li>
                 <li><strong>Status:</strong> ${completed ? "Completed" : "Ongoing (Follow-up Required)"}</li>
               </ul>
-              <p style="font-size: 12px; color: #666; margin-top: 30px;">Health is wealth. Keep smiling!<br>DentalCare Team</p>
+              <p style="font-size: 12px; color: #666; margin-top: 30px;">Health is wealth. Keep smiling!<br>Orisyn Care Team</p>
             </div>
           </div>
         `;
@@ -415,8 +421,8 @@ router.post(
             </head>
             <body>
               <div class="header">
-                <h1 style="margin:0">Dental Care</h1>
-                <p style="margin:5px 0 0; opacity: 0.9;">Official Clinical & Billing Report</p>
+                <h1 style="margin:0">Orisyn</h1>
+                <p style="margin:5px 0 0; opacity: 0.9;">The AI Operating System for Dental Clinics</p>
               </div>
               
               <div class="section">
@@ -517,9 +523,9 @@ router.post(
           });
 
           await transporter.sendMail({
-            from: '"DentalCare AI" <reports@dentalcare.com>',
+            from: '"Orisyn AI" <reports@dentalcare.com>',
             to: patientEmail,
-            subject: `Your Dental Visit Report - ${visit.visitId}`,
+            subject: `Your Orisyn Visit Report - ${visit.visitId}`,
             html: htmlContent,
             attachments: [
               {

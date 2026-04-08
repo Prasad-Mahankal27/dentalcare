@@ -11,7 +11,7 @@ import os
 
 SAMPLE_RATE = 16000
 CHANNELS = 1
-AUDIO_FILE = "recording.wav"
+AUDIO_FILE = os.getenv("AI_RECORDING_PATH", "recording.wav")
 
 _audio_chunks: list[np.ndarray] = []
 _lock = threading.Lock()
