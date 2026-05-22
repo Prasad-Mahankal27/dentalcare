@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { Toaster } from "react-hot-toast";
 
 import DoctorDashboard from "./pages/DoctorDashboard";
 import Login from "./pages/login";
@@ -37,14 +38,21 @@ function App() {
 
   // 1. If no user, show Login page
   if (!user) {
-    return <Login onLogin={handleLogin} />;
+    return (
+      <>
+        <Toaster />
+        <Login onLogin={handleLogin} />
+      </>
+    );
   }
 
   const isDoctor = user.role === "DOCTOR";
   const isReception = user.role === "RECEPTION" || user.role === "RECEPTIONIST";
 
   return (
-    <Routes>
+    <>
+      <Toaster />
+      <Routes>
       {/* Root redirect logic */}
       <Route
         path="/"
@@ -99,7 +107,8 @@ function App() {
   path="/doctor/patient/:patientId"
   element={<PatientVisitsPage token={user.token} />}
 />
-    </Routes>
+      </Routes>
+    </>
   );
 }
 

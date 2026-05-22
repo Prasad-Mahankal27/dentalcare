@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import toast from "react-hot-toast";
 import {
   FileText,
   CheckCircle,
@@ -337,9 +338,11 @@ export default function BillingForm({
 
       setQrCreatedAt(createdAt);
       setQrSecondsLeft(Math.ceil(QR_VALIDITY_MS / 1000));
+      toast.success("UPI QR Code generated!");
     } catch (err: any) {
       resetQrState();
       setQrError(err.message || "Failed to generate QR code");
+      toast.error(err.message || "Failed to generate QR code");
     } finally {
       setGeneratingQr(false);
     }
@@ -366,8 +369,10 @@ export default function BillingForm({
       setPaymentVerified(true);
       setPaymentStatusText("Payment verified manually.");
       setPaymentStatusTone("success");
+      toast.success("Payment verified successfully!");
     } catch (err: any) {
       setQrError(err.message || "Manual verification failed");
+      toast.error(err.message || "Manual verification failed");
     } finally {
       setManuallyVerifying(false);
     }
@@ -375,7 +380,7 @@ export default function BillingForm({
 
   async function submitBilling() {
     if (!visit?.id) {
-      alert("Visit not loaded properly");
+      toast.error("Visit not loaded properly");
       return;
     }
 
@@ -407,10 +412,11 @@ export default function BillingForm({
       }
 
       setSubmitted(true);
+      toast.success("Billing finalized successfully!");
       onBillingDone?.();
 
     } catch (err: any) {
-      alert(err.message || "Billing failed");
+      toast.error(err.message || "Billing failed");
     } finally {
       setLoading(false);
     }

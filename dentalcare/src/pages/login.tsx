@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
+import toast from "react-hot-toast";
 import '../index.css';
 
 export default function Login({ onLogin }: any) {
@@ -16,10 +17,11 @@ async function handleLogin() {
   
   if (res.ok) {
     const data = await res.json();
+    toast.success("Login successful!");
     onLogin(data); 
   } else {
     const errorData = await res.json();
-    alert(errorData.message || "Login failed");
+    toast.error(errorData.message || "Login failed");
   }
 }
 

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import toast from "react-hot-toast";
 import {
   ArrowLeft,
   CalendarClock,
@@ -195,10 +196,12 @@ export default function AppointmentDetailsPage({ user }: AppointmentDetailsPageP
         ? "Visit was already started. Redirecting to workflow."
         : "Visit started successfully. Redirecting to workflow.";
       setActionMessage(message);
+      toast.success(message);
       navigate(`/doctor/visit/${visitId}/workflow`);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to start visit from appointment";
       setActionError(message);
+      toast.error(message);
     } finally {
       setStartingVisit(false);
     }

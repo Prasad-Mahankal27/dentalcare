@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import toast from "react-hot-toast";
 import { Save, CheckCircle, Sparkles, Edit3 } from "lucide-react";
 
 interface ClinicalDetailsWithAIProps {
@@ -166,6 +167,7 @@ export default function ClinicalDetailsWithAI({
 
       setStatus("saved");
       isDirtyRef.current = false;
+      toast.success(proceed ? "Clinical details saved!" : "Draft saved successfully!");
       setTimeout(() => setStatus("idle"), 2500);
 
       if (proceed) {
@@ -192,6 +194,7 @@ export default function ClinicalDetailsWithAI({
     } catch (e: any) {
       setStatus("error");
       setErrorMsg(e.message || "Save failed");
+      toast.error(e.message || "Save failed");
     }
   }
 

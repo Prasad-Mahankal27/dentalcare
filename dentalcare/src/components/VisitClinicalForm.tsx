@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import toast from "react-hot-toast";
 import { Save, CheckCircle } from "lucide-react";
 
 interface VisitClinicalFormProps {
@@ -115,6 +116,7 @@ export default function VisitClinicalForm({
 
       setStatus("saved");
       isDirtyRef.current = false;
+      toast.success(proceed ? "Clinical details saved!" : "Draft saved successfully!");
 
       setTimeout(() => {
         setStatus("idle");
@@ -128,6 +130,7 @@ export default function VisitClinicalForm({
       console.error(err);
       setStatus("error");
       setError(err.message || "Save failed");
+      toast.error(err.message || "Save failed");
     }
   }
 

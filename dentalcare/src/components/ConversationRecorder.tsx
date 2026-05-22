@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import toast from "react-hot-toast";
 
 type RecordingState = "idle" | "recording" | "processing" | "done" | "error";
 
@@ -42,9 +43,11 @@ export default function ConversationRecorder({ patientId, onDataExtracted, onSki
         const d = await res.json().catch(() => ({}));
         throw new Error(d.detail || "Failed to start recording");
       }
+      toast.success("Recording started!");
     } catch (e: any) {
       setError(e.message);
       setStatusMsg("");
+      toast.error(e.message || "Failed to start recording");
       return;
     }
 
@@ -59,6 +62,7 @@ export default function ConversationRecorder({ patientId, onDataExtracted, onSki
     setState("processing");
     setError(null);
     setStatusMsg("Stopping recording & transcribing...");
+    const toastId = toast.loading("Stopping recording & transcribing...");
 
     let transcriptLen = 0;
     try {
@@ -72,16 +76,20 @@ export default function ConversationRecorder({ patientId, onDataExtracted, onSki
     } catch (e: any) {
       setError(e.message);
       setState("error");
+      toast.error(e.message || "Failed to stop recording", { id: toastId });
       return;
     }
 
     if (transcriptLen <= 0) {
-      setError("No speech detected. Please speak clearly and try again.");
+      const errMsg = "No speech detected. Please speak clearly and try again.";
+      setError(errMsg);
       setState("error");
+      toast.error(errMsg, { id: toastId });
       return;
     }
 
     setStatusMsg("Analysing conversation with AI...");
+    toast.loading("Analyzing conversation with AI...", { id: toastId });
 
     try {
       const [summaryRes, emrRes] = await Promise.all([
@@ -98,6 +106,7 @@ export default function ConversationRecorder({ patientId, onDataExtracted, onSki
 
       setState("done");
       setStatusMsg("Analysis complete!");
+      toast.success("AI Analysis complete!", { id: toastId });
       onDataExtracted({
         summary: summaryData.summary ?? "",
         emr: emrData ?? {},
@@ -105,6 +114,7 @@ export default function ConversationRecorder({ patientId, onDataExtracted, onSki
     } catch (e: any) {
       setError(e.message);
       setState("error");
+      toast.error(e.message || "AI Analysis failed.", { id: toastId });
     }
   }
 

@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import { User, FileText, CreditCard, CheckCircle, Mic } from "lucide-react";
 
 import ConversationRecorder from "./ConversationRecorder";
@@ -30,7 +31,6 @@ export default function VisitWorkflow({ token }: VisitWorkflowProps) {
   const [closing, setClosing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [visitType, setVisitType] = useState<"NEW" | "FOLLOW_UP">("NEW");
   const [patientEmail, setPatientEmail] = useState("");
 
   // AI data
@@ -86,12 +86,20 @@ export default function VisitWorkflow({ token }: VisitWorkflowProps) {
 
   /* ─── Visit type update ─── */
   async function updateVisitType(type: "NEW" | "FOLLOW_UP") {
-    setVisitType(type);
-    await fetch(`http://localhost:4000/visits/${visit.visitId}/type`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ visitType: type }),
-    });
+    try {
+      const res = await fetch(`http://localhost:4000/visits/${visit.visitId}/type`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ visitType: type }),
+      });
+      if (res.ok) {
+        toast.success("Visit type updated!");
+      } else {
+        toast.error("Failed to update visit type");
+      }
+    } catch (e) {
+      toast.error("Failed to update visit type");
+    }
     fetchVisit();
   }
 
@@ -111,9 +119,10 @@ export default function VisitWorkflow({ token }: VisitWorkflowProps) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to close visit");
+      toast.success("Visit completed & closed successfully!");
       navigate("/doctor");
     } catch (err: any) {
-      alert(err.message || "Failed to close visit");
+      toast.error(err.message || "Failed to close visit");
     } finally {
       setClosing(false);
     }
@@ -143,7 +152,7 @@ export default function VisitWorkflow({ token }: VisitWorkflowProps) {
   async function handleMedicationsFinish(prescription: any[]) {
     // Save doctor-confirmed medicines to backend as JSON array
     try {
-      await fetch(`http://localhost:4000/visits/update/${visit.visitId}`, {
+      const res = await fetch(`http://localhost:4000/visits/update/${visit.visitId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -151,9 +160,15 @@ export default function VisitWorkflow({ token }: VisitWorkflowProps) {
         },
         body: JSON.stringify({ medicines: JSON.stringify(prescription) }),
       });
+      if (res.ok) {
+        toast.success("Prescription saved successfully!");
+      } else {
+        toast.error("Failed to save prescription");
+      }
       await fetchVisit(); // Refresh visit data with saved medicines
     } catch (e) {
       console.error("Failed to save medicines", e);
+      toast.error("Failed to save prescription");
     }
     setActiveStep(3);
   }

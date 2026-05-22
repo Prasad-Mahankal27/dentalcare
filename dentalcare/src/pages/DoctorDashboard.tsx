@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import toast from "react-hot-toast";
 import { Sidebar } from "../components/Sidebar";
 import Header from "../components/Header";
 
@@ -111,10 +112,11 @@ export default function DoctorDashboard({ user }: DoctorDashboardProps) {
         throw new Error(data.message || "Failed to start visit");
       }
 
+      toast.success("Visit started successfully!");
       navigate(`/doctor/visit/${data.visitId}/workflow`);
 
     } catch (err: any) {
-      alert(err.message || "Failed to start visit");
+      toast.error(err.message || "Failed to start visit");
     } finally {
       setStartingVisit(false);
     }

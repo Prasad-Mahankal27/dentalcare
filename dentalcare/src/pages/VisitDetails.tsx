@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import {
   ArrowLeft,
   Calendar,
@@ -38,7 +39,7 @@ export default function VisitDetails() {
         setVisit(data);
       } catch (err) {
         console.error(err);
-        alert("Failed to load visit details");
+        toast.error("Failed to load visit details");
       } finally {
         setLoading(false);
       }

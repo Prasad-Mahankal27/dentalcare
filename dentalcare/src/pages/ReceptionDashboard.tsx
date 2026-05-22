@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
 import {
   CalendarClock,
   Check,
@@ -397,10 +398,12 @@ export default function ReceptionDashboard({ user }: ReceptionDashboardProps) {
       }
 
       setAppointmentMessage(`Appointment ${appointmentId} marked as completed.`);
+      toast.success("Appointment marked as completed!");
       await refreshDashboard(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to complete appointment";
       setAppointmentError(message);
+      toast.error(message);
     } finally {
       setActionLoadingId(null);
     }
@@ -427,10 +430,12 @@ export default function ReceptionDashboard({ user }: ReceptionDashboardProps) {
       }
 
       setAppointmentMessage(`Appointment ${appointmentId} cancelled.`);
+      toast.success("Appointment cancelled successfully!");
       await refreshDashboard(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to cancel appointment";
       setAppointmentError(message);
+      toast.error(message);
     } finally {
       setActionLoadingId(null);
     }
@@ -463,10 +468,12 @@ export default function ReceptionDashboard({ user }: ReceptionDashboardProps) {
       }
 
       setAppointmentMessage(`Appointment ${appointmentId} deleted.`);
+      toast.success("Appointment deleted successfully!");
       await refreshDashboard(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to delete appointment";
       setAppointmentError(message);
+      toast.error(message);
     } finally {
       setActionLoadingId(null);
     }
@@ -513,10 +520,12 @@ export default function ReceptionDashboard({ user }: ReceptionDashboardProps) {
 
       closeRescheduleDialog();
       setAppointmentMessage(`Appointment ${rescheduleTarget.id} rescheduled successfully.`);
+      toast.success("Appointment rescheduled successfully!");
       await refreshDashboard(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to reschedule appointment";
       setAppointmentError(message);
+      toast.error(message);
     } finally {
       setActionLoadingId(null);
     }
@@ -573,6 +582,7 @@ export default function ReceptionDashboard({ user }: ReceptionDashboardProps) {
       setAppointmentMessage(
         `Appointment booked and confirmed. Ref: ${data.appointmentId} | Patient: ${data.patientId}`
       );
+      toast.success("Appointment booked successfully!");
       setAppointmentForm(INITIAL_APPOINTMENT_FORM);
       setFormOpen(false);
 
@@ -583,6 +593,7 @@ export default function ReceptionDashboard({ user }: ReceptionDashboardProps) {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Appointment booking failed";
       setAppointmentError(message);
+      toast.error(message);
     } finally {
       setAppointmentLoading(false);
     }

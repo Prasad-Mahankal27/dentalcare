@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import {
   ArrowLeft,
   Download,
@@ -137,6 +138,7 @@ export default function SettingsPage({ user, onLogout }: SettingsPageProps) {
 
   async function checkForUpdates() {
     setIsChecking(true);
+    const toastId = toast.loading("Checking for updates...");
 
     try {
       const result = await window.ipcRenderer.invoke("updater:check") as ManualCheckResult;
@@ -145,10 +147,14 @@ export default function SettingsPage({ user, onLogout }: SettingsPageProps) {
           status: "error",
           message: result.message || "Could not check for updates"
         });
+        toast.error(result.message || "Could not check for updates", { id: toastId });
+      } else {
+        toast.success("Check completed! Processing update...", { id: toastId });
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Could not check for updates";
       setUpdateStatus({ status: "error", message });
+      toast.error(message, { id: toastId });
     } finally {
       setIsChecking(false);
     }
