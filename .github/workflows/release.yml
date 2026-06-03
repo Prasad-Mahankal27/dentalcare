@@ -1,0 +1,60 @@
+name: Publish Desktop Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-and-publish:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: |
+            package-lock.json
+            dentalcare/package-lock.json
+            dentalcare/backend/package-lock.json
+            ai-backend/package-lock.json
+            upi-pay/package-lock.json
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install app dependencies
+        run: |
+          npm ci --prefix dentalcare
+          npm ci --prefix dentalcare/backend
+          npm ci --prefix ai-backend
+          npm ci --prefix upi-pay
+
+      - name: Publish macOS release
+        if: runner.os == 'macOS'
+        run: npm --prefix dentalcare run dist:mac:publish
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          ORISYN_GH_OWNER: ${{ github.repository_owner }}
+          ORISYN_GH_REPO: ${{ github.event.repository.name }}
+
+      - name: Publish Windows release
+        if: runner.os == 'Windows'
+        run: npm --prefix dentalcare run dist:win:publish
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          ORISYN_GH_OWNER: ${{ github.repository_owner }}
+          ORISYN_GH_REPO: ${{ github.event.repository.name }}
