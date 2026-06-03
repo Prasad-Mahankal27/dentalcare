@@ -1,0 +1,1 @@
+"""Shared utility helpers for HTTP and common patterns."""

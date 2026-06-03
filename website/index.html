@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Orisyn Downloads</title>
+    <meta name="description" content="Download the latest Orisyn desktop installers for Windows and macOS." />
+  </head>
+  <body>
+    <main>
+      <h1>Orisyn</h1>
+      <p>The AI Operating System for Dental Clinics</p>
+
+      <p id="versionText">Latest Version: Loading...</p>
+      <p id="statusText">Fetching latest release from GitHub...</p>
+
+      <p>
+        <a id="windowsButton" href="#" aria-disabled="true">Download for Windows</a>
+      </p>
+      <p>
+        <a id="macButton" href="#" aria-disabled="true">Download for Mac</a>
+      </p>
+    </main>
+
+    <script>
+      window.ORISYN_GITHUB_OWNER = "Parallaxstudioco";
+      window.ORISYN_GITHUB_REPO = "Orisyn";
+      window.ORISYN_WEBSITE_URL = "https://orisyn.parallaxstudio.co.in/";
+    </script>
+    <script src="./latest-release.js" defer></script>
+  </body>
+</html>

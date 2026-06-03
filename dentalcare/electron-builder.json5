@@ -1,0 +1,176 @@
+{
+  "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
+  "appId": "com.parallax.orisyn",
+  "asar": true,
+  "asarUnpack": ["**/*.node", "**/*.exe", "**/*.dylib"],
+  "compression": "maximum",
+  "npmRebuild": false,
+  "nodeGypRebuild": false,
+  "buildDependenciesFromSource": false,
+  "removePackageScripts": true,
+  "electronLanguages": [
+    "en-US"
+  ],
+  "productName": "Orisyn",
+  "directories": {
+    "output": "release/${version}"
+  },
+  "beforePack": "./scripts/prepare-packaged-services.mjs",
+  "afterPack": "./scripts/after-pack-minimize.mjs",
+  "publish": [
+    {
+      "provider": "github",
+      "owner": "parallaxstudioco",
+      "repo": "Orisyn",
+      "releaseType": "release"
+    }
+  ],
+  "files": [
+    {
+      "from": ".",
+      "filter": [
+        "dist/**",
+        "dist-electron/**",
+        "package.json",
+        "!**/*.map",
+        "!**/*.ts",
+        "!**/*.tsx",
+        "!**/*.d.ts",
+        "!**/*.md",
+        "!**/README*",
+        "!**/__tests__/**",
+        "!**/tests/**",
+        "!**/coverage/**",
+        "!**/.cache/**",
+        "!**/*.log",
+        "!**/.env*",
+        "!**/.DS_Store"
+      ]
+    }
+  ],
+  "extraResources": [
+    {
+      "from": ".env.production",
+      "to": ".env.production"
+    },
+    {
+      "from": "build/packaged-services/backend",
+      "to": "services/backend",
+      "filter": [
+        "**/*"
+      ]
+    },
+    {
+      "from": "build/packaged-services/ai-backend",
+      "to": "services/ai-backend",
+      "filter": [
+        "**/*"
+      ]
+    },
+    {
+      "from": "build/packaged-services/upi-pay",
+      "to": "services/upi-pay",
+      "filter": [
+        "**/*"
+      ]
+    },
+    {
+      "from": "../ai-service/dist/ai-service",
+      "to": "services/ai-service",
+      "filter": [
+        "**/*",
+        "!**/*.py",
+        "!**/*.pyi",
+        "!**/*.pyc",
+        "!**/__pycache__/**",
+        "!**/*.spec",
+        "!**/*.map",
+        "!**/*.log",
+        "!**/.DS_Store"
+      ]
+    },
+    {
+      "from": "../flask-backend/dist/flask-backend",
+      "to": "services/flask-backend",
+      "filter": [
+        "**/*",
+        "!**/*.py",
+        "!**/*.pyi",
+        "!**/*.pyc",
+        "!**/__pycache__/**",
+        "!**/*.spec",
+        "!**/*.map",
+        "!**/*.log",
+        "!**/.DS_Store"
+      ]
+    },
+    {
+      "from": "../whatsapp/dist/whatsapp",
+      "to": "services/whatsapp",
+      "filter": [
+        "**/*",
+        "!**/*.py",
+        "!**/*.pyi",
+        "!**/*.pyc",
+        "!**/__pycache__/**",
+        "!**/*.spec",
+        "!**/*.map",
+        "!**/*.log",
+        "!**/.DS_Store"
+      ]
+    },
+    {
+      "from": "../scripts",
+      "to": "services/scripts",
+      "filter": [
+        "start-ngrok.js"
+      ]
+    }
+  ],
+  "mac": {
+    "category": "public.app-category.medical",
+    "hardenedRuntime": true,
+    "gatekeeperAssess": false,
+    "entitlements": "build/entitlements.mac.plist",
+    "entitlementsInherit": "build/entitlements.mac.plist",
+    "extendInfo": {
+      "NSMicrophoneUsageDescription": "Orisyn needs microphone access to record consultations for AI clinical documentation."
+    },
+    "target": [
+      {
+        "target": "dmg",
+        "arch": [
+          "arm64"
+        ]
+      },
+      {
+        "target": "zip",
+        "arch": [
+          "arm64"
+        ]
+      }
+    ],
+    "artifactName": "${productName}-Mac-arm64-${version}.${ext}"
+  },
+  "dmg": {
+    "artifactName": "${productName}-Mac-arm64-${version}.dmg",
+    "writeUpdateInfo": false
+  },
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": [
+          "x64"
+        ]
+      }
+    ],
+    "artifactName": "${productName}-Windows-${version}-Setup.${ext}"
+  },
+  "nsis": {
+    "oneClick": false,
+    "perMachine": false,
+    "allowToChangeInstallationDirectory": true,
+    "deleteAppDataOnUninstall": true
+  }
+}

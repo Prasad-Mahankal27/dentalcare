@@ -1,0 +1,1 @@
+"""Service-layer integrations (Supabase clients, external APIs)."""
